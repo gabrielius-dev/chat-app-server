@@ -4,10 +4,10 @@ import logger from "morgan";
 import dotenv from "dotenv";
 import indexRouter from "./routes/index";
 import mongoose from "mongoose";
+import passport from "passport";
+import initializePassport from "./configs/passport";
+import session from "express-session";
 dotenv.config();
-
-const app: Application = express();
-const port = process.env.PORT || 8000;
 
 if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI);
@@ -15,6 +15,23 @@ if (process.env.MONGODB_URI) {
   console.error("MONGODB_URI environment variable is not defined.");
 }
 
+const app: Application = express();
+const port = process.env.PORT || 8000;
+
+if (process.env.SESSION_SECRET_KEY) {
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET_KEY,
+      resave: false,
+      saveUninitialized: true,
+    })
+  );
+} else {
+  console.error("SESSION_SECRET_KEY environment variable is not defined.");
+}
+initializePassport();
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
