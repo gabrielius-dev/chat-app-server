@@ -12,7 +12,7 @@ function initializePassport() {
         if (!user) {
           const customOptions: CustomVerifyOptions = {
             success: false,
-            message: "Incorrect username",
+            message: "Username doesn't exist",
             path: "username",
           };
           return done(null, false, customOptions);
