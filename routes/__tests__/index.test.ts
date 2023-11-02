@@ -252,3 +252,41 @@ describe("POST /login", () => {
     });
   });
 });
+
+describe("POST /logout", () => {
+  let databaseUser: mongoose.Document;
+  beforeAll(async () => {
+    // Hashed password from bcrypt
+    databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+  });
+
+  afterAll(async () => {
+    await UserModel.findByIdAndDelete(databaseUser);
+  });
+
+  it("Logs out user successfully", async () => {
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const response = await request(testServer)
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const response2 = await request(testServer)
+      .post("/logout")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response2.status).toBe(200);
+    expect(response2.body).toHaveProperty("message", "Log out successful");
+  });
+});
