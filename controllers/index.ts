@@ -3,6 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import UserModel from "../models/user";
 import expressAsyncHandler from "express-async-handler";
+import passport from "passport";
 
 export const userSignUpPost = [
   body("username")
@@ -69,6 +70,66 @@ export const userSignUpPost = [
             user,
           });
         });
+      }
+    }
+  ),
+];
+
+export const userLoginPost = [
+  body("username")
+    .escape()
+    .trim()
+    .notEmpty()
+    .withMessage("Username must be specified")
+    .isLength({ max: 100 })
+    .withMessage("Username can't exceed 100 characters")
+    .custom(async (value) => {
+      const user = await UserModel.findOne({ username: value });
+      if (!user) throw new Error("Username doesn't exist");
+    }),
+  body("password")
+    .escape()
+    .trim()
+    .notEmpty()
+    .withMessage("Password must be specified")
+    .isLength({ max: 100 })
+    .withMessage("Password can't exceed 100 characters"),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      const errors = validationResult(req).formatWith((err) => {
+        if (err.type === "field")
+          return {
+            path: err.path,
+            message: err.msg,
+          };
+      });
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: "Login failed",
+          errors: errors.array(),
+        });
+      } else {
+        passport.authenticate("local", (err: any, user: any, info: any) => {
+          if (err) {
+            return next(err);
+          }
+          if (!user) {
+            return res.status(400).json({
+              success: false,
+              message: "Login failed",
+              errors: [info],
+            });
+          }
+          req.login(user, (err) => {
+            if (err) {
+              return next(err);
+            }
+            return res
+              .status(200)
+              .json({ success: true, message: "Login successful", user });
+          });
+        })(req, res, next);
       }
     }
   ),
