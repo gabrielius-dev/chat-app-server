@@ -22,9 +22,9 @@ afterAll(async () => {
 });
 
 describe("POST /sign-up", () => {
-  // UNIT TESTS THAT DOESN'T COMMUNICATE WITH DATABASE
-  describe("Unit tests that doesn't communicate with database", () => {
-    it("Passwords doesn't match", async () => {
+  // UNIT TESTS THAT DON'T COMMUNICATE WITH DATABASE
+  describe("Unit tests that don't communicate with database", () => {
+    it("Passwords don't match", async () => {
       const user = {
         username: "test_username",
         password: "test_password",
@@ -135,6 +135,119 @@ describe("POST /sign-up", () => {
       expect(response.body.errors[0]).toHaveProperty(
         "message",
         "Username already exists"
+      );
+    });
+  });
+});
+
+describe("POST /login", () => {
+  let databaseUser: mongoose.Document;
+  beforeAll(async () => {
+    // Hashed password from bcrypt
+    databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+  });
+
+  afterAll(async () => {
+    await UserModel.findByIdAndDelete(databaseUser);
+  });
+
+  // UNIT TESTS THAT DON'T COMMUNICATE WITH DATABASE
+  describe("Unit tests that don't communicate with database", () => {
+    it("Username can't exceed 100 characters", async () => {
+      const user = {
+        username:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        password: "test_password",
+      };
+
+      const response = await request(testServer)
+        .post("/login")
+        .send(user)
+        .set("Accept", "application/json");
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Login failed");
+      expect(response.body.errors[0]).toHaveProperty(
+        "message",
+        "Username can't exceed 100 characters"
+      );
+    });
+
+    it("Password can't exceed 100 characters", async () => {
+      const user = {
+        username: "testing_username",
+        password:
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      };
+
+      const response = await request(testServer)
+        .post("/login")
+        .send(user)
+        .set("Accept", "application/json");
+
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Login failed");
+      expect(response.body.errors[0]).toHaveProperty(
+        "message",
+        "Password can't exceed 100 characters"
+      );
+    });
+  });
+
+  // INTEGRATION TESTS WITH REAL DATABASE
+  // TAKES SOME TIME
+  describe("Integration tests with real database", () => {
+    it("Should successfully login a user", async () => {
+      const user = {
+        username: "testing_username",
+        password: "testing_password",
+      };
+      const response = await request(testServer)
+        .post("/login")
+        .send(user)
+        .set("Accept", "application/json");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("message", "Login successful");
+    });
+
+    it("Username doesn't exist in the database", async () => {
+      const user = {
+        username: "fake_username",
+        password: "fake_password",
+      };
+
+      const response = await request(testServer)
+        .post("/login")
+        .send(user)
+        .set("Accept", "application/json");
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Login failed");
+      expect(response.body.errors[0]).toHaveProperty(
+        "message",
+        "Username doesn't exist"
+      );
+    });
+
+    it("Incorrect password", async () => {
+      const user = {
+        username: "testing_username",
+        password: "wrong_password",
+      };
+
+      const response = await request(testServer)
+        .post("/login")
+        .send(user)
+        .set("Accept", "application/json");
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty("message", "Login failed");
+      expect(response.body.errors[0]).toHaveProperty(
+        "message",
+        "Incorrect password"
       );
     });
   });
