@@ -1,12 +1,21 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import { userLoginPost, userSignUpPost } from "../controllers";
+import cors from "cors";
 const router = express.Router();
 
-router.get("/", (req: Request, res: Response) => {
-  res.send("Index page");
+const corsForAuthenticatedRoutes = cors({
+  origin: "http://localhost:4000",
+  credentials: true,
 });
 
-router.post("/sign-up", userSignUpPost);
-router.post("/login", userLoginPost);
+const corsForPublicRoutes = cors({
+  origin: "http://localhost:4000",
+});
+
+router.options(["/sign-up", "/login"], corsForPublicRoutes);
+router.options("*", corsForAuthenticatedRoutes);
+
+router.post("/sign-up", corsForPublicRoutes, userSignUpPost);
+router.post("/login", corsForPublicRoutes, userLoginPost);
 
 export default router;
