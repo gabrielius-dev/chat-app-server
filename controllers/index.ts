@@ -134,3 +134,13 @@ export const userLoginPost = [
     }
   ),
 ];
+
+export const userLogOutPost = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    req.logout((err: any) => {
+      if (err) return next(err);
+    });
+    res.clearCookie("connect.sid");
+    res.status(200).json({ success: true, message: "Log out successful" });
+  }
+);
