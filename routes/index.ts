@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { userSignUpPost } from "../controllers";
+import { userLoginPost, userSignUpPost } from "../controllers";
 const router = express.Router();
 
 router.get("/", (req: Request, res: Response) => {
@@ -7,5 +7,6 @@ router.get("/", (req: Request, res: Response) => {
 });
 
 router.post("/sign-up", userSignUpPost);
+router.post("/login", userLoginPost);
 
 export default router;
