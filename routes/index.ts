@@ -4,12 +4,12 @@ import cors from "cors";
 const router = express.Router();
 
 const corsForAuthenticatedRoutes = cors({
-  origin: "http://localhost:4000",
+  origin: "http://localhost:5173",
   credentials: true,
 });
 
 const corsForPublicRoutes = cors({
-  origin: "http://localhost:4000",
+  origin: "http://localhost:5173",
 });
 
 router.options(["/sign-up", "/login"], corsForPublicRoutes);
