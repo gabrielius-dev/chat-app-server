@@ -1,5 +1,10 @@
 import express from "express";
-import { userLoginPost, userSignUpPost, userLogOutPost } from "../controllers";
+import {
+  userLoginPost,
+  userSignUpPost,
+  userLogOutPost,
+  getUserDetails,
+} from "../controllers";
 import cors from "cors";
 const router = express.Router();
 
@@ -18,5 +23,6 @@ router.options("*", corsForAuthenticatedRoutes);
 router.post("/sign-up", corsForPublicRoutes, userSignUpPost);
 router.post("/login", corsForPublicRoutes, userLoginPost);
 router.post("/logout", corsForAuthenticatedRoutes, userLogOutPost);
+router.get("/user", corsForAuthenticatedRoutes, getUserDetails);
 
 export default router;
