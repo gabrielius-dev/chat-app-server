@@ -144,3 +144,20 @@ export const userLogOutPost = expressAsyncHandler(
     res.status(200).json({ success: true, message: "Log out successful" });
   }
 );
+
+export const getUserDetails = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (req.user) {
+      res.status(200).json({
+        success: true,
+        message: "User found",
+        user: req.user,
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+  }
+);
