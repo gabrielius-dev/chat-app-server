@@ -4,6 +4,7 @@ import createServer from "../../server";
 import { Server } from "http";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+const session = require("supertest-session");
 dotenv.config();
 
 let testServer: Server;
@@ -95,6 +96,10 @@ describe("POST /sign-up", () => {
   // INTEGRATION TESTS WITH REAL DATABASE
   // TAKES SOME TIME
   describe("Integration tests with real database", () => {
+    afterEach(async () => {
+      await request(testServer).post("/logout");
+    });
+
     it("Should successfully sign up a user", async () => {
       const user = {
         username: "test_username",
@@ -201,6 +206,10 @@ describe("POST /login", () => {
   // INTEGRATION TESTS WITH REAL DATABASE
   // TAKES SOME TIME
   describe("Integration tests with real database", () => {
+    afterEach(async () => {
+      await request(testServer).post("/logout");
+    });
+
     it("Should successfully login a user", async () => {
       const user = {
         username: "testing_username",
@@ -288,5 +297,46 @@ describe("POST /logout", () => {
 
     expect(response2.status).toBe(200);
     expect(response2.body).toHaveProperty("message", "Log out successful");
+  });
+});
+
+describe("GET /user", () => {
+  it("User is logged in and details are retrieved", async () => {
+    const testSession = session(testServer);
+
+    const databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const response2 = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response2.status).toBe(200);
+    expect(response2.body).toHaveProperty("message", "Login successful");
+
+    const response = await testSession
+      .get("/user")
+      .set("Accept", "application/json");
+
+    await UserModel.findByIdAndDelete(databaseUser);
+
+    expect(response.status).toBe(200);
+    expect(response.body.user).toHaveProperty("username", "testing_username");
+  });
+  it("User is not logged in, details not found", async () => {
+    const response = await request(testServer)
+      .get("/user")
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("message", "User not found");
   });
 });
