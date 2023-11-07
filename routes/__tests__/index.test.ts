@@ -336,7 +336,8 @@ describe("GET /user", () => {
       .get("/user")
       .set("Accept", "application/json");
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("message", "User not found");
+    expect(response.body.user).toBe(null);
   });
 });
