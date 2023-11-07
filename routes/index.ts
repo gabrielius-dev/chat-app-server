@@ -8,21 +8,16 @@ import {
 import cors from "cors";
 const router = express.Router();
 
-const corsForAuthenticatedRoutes = cors({
+const corsForRoutes = cors({
   origin: "http://localhost:5173",
   credentials: true,
 });
 
-const corsForPublicRoutes = cors({
-  origin: "http://localhost:5173",
-});
+router.options("*", corsForRoutes);
 
-router.options(["/sign-up", "/login"], corsForPublicRoutes);
-router.options("*", corsForAuthenticatedRoutes);
-
-router.post("/sign-up", corsForPublicRoutes, userSignUpPost);
-router.post("/login", corsForPublicRoutes, userLoginPost);
-router.post("/logout", corsForAuthenticatedRoutes, userLogOutPost);
-router.get("/user", corsForAuthenticatedRoutes, getUserDetails);
+router.post("/sign-up", corsForRoutes, userSignUpPost);
+router.post("/login", corsForRoutes, userLoginPost);
+router.post("/logout", corsForRoutes, userLogOutPost);
+router.get("/user", corsForRoutes, getUserDetails);
 
 export default router;
