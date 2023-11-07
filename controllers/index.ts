@@ -154,9 +154,10 @@ export const getUserDetails = expressAsyncHandler(
         user: req.user,
       });
     } else {
-      res.status(404).json({
+      res.status(200).json({
         success: false,
         message: "User not found",
+        user: null,
       });
     }
   }
