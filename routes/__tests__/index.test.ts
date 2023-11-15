@@ -10,7 +10,7 @@ dotenv.config();
 let testServer: Server;
 
 beforeAll(async () => {
-  const app = createServer();
+  const { app } = createServer();
   testServer = app.listen(1234, () => {
     console.log(`Test Server is Fire at http://localhost:1234`);
   });
