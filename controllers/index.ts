@@ -4,6 +4,7 @@ import { body, validationResult } from "express-validator";
 import UserModel from "../models/user";
 import expressAsyncHandler from "express-async-handler";
 import passport from "passport";
+import UserInterface from "../models/types/user";
 
 export const userSignUpPost = [
   body("username")
@@ -160,5 +161,20 @@ export const getUserDetails = expressAsyncHandler(
         user: null,
       });
     }
+  }
+);
+
+export const getUserList = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const skipAmount = ((Number(req.query.loadOffset) || 1) - 1) * 10;
+    const userList = await UserModel.find(
+      { _id: { $ne: req.query.userId } },
+      "-password"
+    )
+      .skip(skipAmount)
+      .limit(10)
+      .exec();
+
+    res.status(200).json({ userList });
   }
 );
