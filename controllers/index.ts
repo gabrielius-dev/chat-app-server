@@ -5,6 +5,8 @@ import UserModel from "../models/user";
 import expressAsyncHandler from "express-async-handler";
 import passport from "passport";
 import UserInterface from "../models/types/user";
+import mongoose from "mongoose";
+import MessageModel from "../models/message";
 
 export const userSignUpPost = [
   body("username")
@@ -167,14 +169,74 @@ export const getUserDetails = expressAsyncHandler(
 export const getUserList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const skipAmount = ((Number(req.query.loadOffset) || 1) - 1) * 10;
-    const userList = await UserModel.find(
-      { _id: { $ne: req.query.userId } },
-      "-password"
-    )
-      .skip(skipAmount)
-      .limit(10)
-      .exec();
 
-    res.status(200).json({ userList });
+    // @ts-ignore
+    const userId = req.user._id;
+    const result = await UserModel.aggregate([
+      {
+        $match: {
+          _id: { $ne: userId },
+        },
+      },
+
+      {
+        $lookup: {
+          from: "messages",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    {
+                      $and: [
+                        { $eq: ["$sender", "$$userId"] },
+                        { $eq: ["$receiver", userId] },
+                      ],
+                    },
+                    {
+                      $and: [
+                        { $eq: ["$sender", userId] },
+                        { $eq: ["$receiver", "$$userId"] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+            {
+              $limit: 1,
+            },
+          ],
+          as: "latestMessage",
+        },
+      },
+      {
+        $unwind: {
+          path: "$latestMessage",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: {
+          "latestMessage.createdAt": -1,
+        },
+      },
+      {
+        $skip: skipAmount,
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $project: {
+          password: 0,
+        },
+      },
+    ]);
+    res.status(200).json(result);
   }
 );
