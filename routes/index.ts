@@ -23,7 +23,7 @@ function checkAuth(req: Request, res: Response, next: NextFunction) {
 
 router.post("/sign-up", corsForRoutes, userSignUpPost);
 router.post("/login", corsForRoutes, userLoginPost);
-router.post("/logout", corsForRoutes, userLogOutPost);
+router.post("/logout", corsForRoutes, checkAuth, userLogOutPost);
 router.get("/user", corsForRoutes, getUserDetails);
 router.get("/userList", corsForRoutes, checkAuth, getUserList);
 
