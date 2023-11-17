@@ -282,7 +282,9 @@ describe("POST /logout", () => {
       username: "testing_username",
       password: "testing_password",
     };
-    const response = await request(testServer)
+    const testSession = session(testServer);
+
+    const response = await testSession
       .post("/login")
       .send(user)
       .set("Accept", "application/json");
@@ -290,7 +292,7 @@ describe("POST /logout", () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("message", "Login successful");
 
-    const response2 = await request(testServer)
+    const response2 = await testSession
       .post("/logout")
       .send(user)
       .set("Accept", "application/json");
