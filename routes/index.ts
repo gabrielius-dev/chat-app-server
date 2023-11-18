@@ -5,6 +5,7 @@ import {
   userLogOutPost,
   getUserDetails,
   getUserList,
+  getMessages,
 } from "../controllers";
 import cors from "cors";
 const router = express.Router();
@@ -26,5 +27,6 @@ router.post("/login", corsForRoutes, userLoginPost);
 router.post("/logout", corsForRoutes, checkAuth, userLogOutPost);
 router.get("/user", corsForRoutes, getUserDetails);
 router.get("/userList", corsForRoutes, checkAuth, getUserList);
+router.get("/messages", corsForRoutes, checkAuth, getMessages);
 
 export default router;
