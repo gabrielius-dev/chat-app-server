@@ -6,6 +6,7 @@ import {
   getUserDetails,
   getUserList,
   getMessages,
+  getDatabaseUserDetails,
 } from "../controllers";
 import cors from "cors";
 const router = express.Router();
@@ -26,6 +27,7 @@ router.post("/sign-up", corsForRoutes, userSignUpPost);
 router.post("/login", corsForRoutes, userLoginPost);
 router.post("/logout", corsForRoutes, checkAuth, userLogOutPost);
 router.get("/user", corsForRoutes, getUserDetails);
+router.get("/user/:id", corsForRoutes, checkAuth, getDatabaseUserDetails);
 router.get("/userList", corsForRoutes, checkAuth, getUserList);
 router.get("/messages", corsForRoutes, checkAuth, getMessages);
 
