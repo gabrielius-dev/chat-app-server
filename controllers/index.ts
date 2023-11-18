@@ -240,3 +240,32 @@ export const getUserList = expressAsyncHandler(
     res.status(200).json(result);
   }
 );
+
+export const getMessages = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const currentUser = req.query.user;
+    const selectedUser = req.query.selectedUser;
+    const skipAmount = Number(req.query.skipAmount);
+    const LIMIT = 20;
+
+    if (!mongoose.Types.ObjectId.isValid(selectedUser as string)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const messages = await MessageModel.find({
+      $or: [
+        { sender: currentUser, receiver: selectedUser },
+        { sender: selectedUser, receiver: currentUser },
+      ],
+    })
+      .skip(skipAmount)
+      .limit(LIMIT)
+      .exec();
+    if (messages.length === 0) res.status(200).json({ data: [] });
+    else
+      res.status(200).json({ data: messages, skipAmount: skipAmount + LIMIT });
+  }
+);
