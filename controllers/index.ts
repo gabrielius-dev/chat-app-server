@@ -269,3 +269,20 @@ export const getMessages = expressAsyncHandler(
       res.status(200).json({ data: messages, skipAmount: skipAmount + LIMIT });
   }
 );
+
+export const getDatabaseUserDetails = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const user = await UserModel.findById(req.params.id).exec();
+
+    if (!user)
+      res.status(200).json({ success: false, message: "User not found" });
+    else res.status(200).json({ success: true, message: "User found", user });
+  }
+);
