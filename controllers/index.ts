@@ -65,12 +65,21 @@ export const userSignUpPost = [
         });
         await user.save();
 
-        req.login(user, (err) => {
+        req.login(user, async (err) => {
           if (err) return next(err);
+          const updatedUser = await UserModel.findByIdAndUpdate(
+            user._id,
+            {
+              lastOnline: Date.now(),
+              online: true,
+            },
+            { new: true }
+          );
+
           res.status(200).json({
             success: true,
             message: "Sign up successful",
-            user,
+            user: updatedUser,
           });
         });
       }
@@ -124,13 +133,24 @@ export const userLoginPost = [
               errors: [info],
             });
           }
-          req.login(user, (err) => {
+          req.login(user, async (err) => {
             if (err) {
               return next(err);
             }
-            return res
-              .status(200)
-              .json({ success: true, message: "Login successful", user });
+            const updatedUser = await UserModel.findByIdAndUpdate(
+              user._id,
+              {
+                lastOnline: Date.now(),
+                online: true,
+              },
+              { new: true }
+            );
+
+            return res.status(200).json({
+              success: true,
+              message: "Login successful",
+              user: updatedUser,
+            });
           });
         })(req, res, next);
       }
@@ -140,6 +160,11 @@ export const userLoginPost = [
 
 export const userLogOutPost = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    // @ts-ignore
+    await UserModel.findByIdAndUpdate(req.user._id, {
+      lastOnline: Date.now(),
+      online: false,
+    });
     req.logout((err: any) => {
       if (err) return next(err);
     });
@@ -151,10 +176,20 @@ export const userLogOutPost = expressAsyncHandler(
 export const getUserDetails = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     if (req.user) {
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        // @ts-ignore
+        req.user._id,
+        {
+          lastOnline: Date.now(),
+          online: true,
+        },
+        { new: true }
+      );
+
       res.status(200).json({
         success: true,
         message: "User found",
-        user: req.user,
+        user: updatedUser,
       });
     } else {
       res.status(200).json({
