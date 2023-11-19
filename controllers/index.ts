@@ -283,13 +283,6 @@ export const getMessages = expressAsyncHandler(
     const skipAmount = Number(req.query.skipAmount);
     const LIMIT = 20;
 
-    if (!mongoose.Types.ObjectId.isValid(selectedUser as string)) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid user ID",
-      });
-    }
-
     const messages = await MessageModel.find({
       $or: [
         { sender: currentUser, receiver: selectedUser },
@@ -310,7 +303,7 @@ export const getDatabaseUserDetails = expressAsyncHandler(
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       res.status(400).json({
         success: false,
-        message: "Invalid user ID",
+        message: "User not found",
       });
     }
 
