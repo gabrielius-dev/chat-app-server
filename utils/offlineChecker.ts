@@ -5,7 +5,7 @@ async function checkOfflineUsers() {
 
   const offlineUsers = await UserModel.find({
     lastOnline: { $lt: new Date(Date.now() - threshold) },
-    online: false,
+    online: true,
   });
 
   await Promise.all(
