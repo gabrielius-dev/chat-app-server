@@ -15,6 +15,7 @@ dotenv.config();
 type CustomServer = {
   app: Application;
   server: HttpServer;
+  io: SocketIOServer;
 };
 
 function createServer(): CustomServer {
@@ -87,7 +88,7 @@ function createServer(): CustomServer {
     });
   });
 
-  return { app, server };
+  return { app, server, io };
 }
 
 export default createServer;
