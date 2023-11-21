@@ -289,12 +289,14 @@ export const getMessages = expressAsyncHandler(
         { sender: selectedUser, receiver: currentUser },
       ],
     })
+      .sort({ createdAt: -1 })
       .skip(skipAmount)
       .limit(LIMIT)
       .exec();
+
+    const sortedMessages = messages.reverse();
     if (messages.length === 0) res.status(200).json({ data: [] });
-    else
-      res.status(200).json({ data: messages, skipAmount: skipAmount + LIMIT });
+    else res.status(200).json(sortedMessages);
   }
 );
 
