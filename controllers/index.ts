@@ -295,7 +295,7 @@ export const getMessages = expressAsyncHandler(
       .exec();
 
     const sortedMessages = messages.reverse();
-    if (messages.length === 0) res.status(200).json({ data: [] });
+    if (messages.length === 0) res.status(200).json([]);
     else res.status(200).json(sortedMessages);
   }
 );
