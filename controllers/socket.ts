@@ -2,6 +2,8 @@ import { Socket } from "socket.io";
 import { ExtendedError } from "socket.io/dist/namespace";
 import MessageModel from "../models/message";
 import { io } from "..";
+import UserModel from "../models/user";
+import UserInterface from "../models/types/user";
 
 export const handleAuthentication = (
   socket: Socket,
@@ -20,7 +22,6 @@ export const handleConnection = (socket: Socket) => {
   console.log("A user connected");
 
   socket.on("join-room", (roomId) => {
-    console.log(roomId);
     socket.join(roomId);
   });
 
@@ -38,9 +39,17 @@ export const handleConnection = (socket: Socket) => {
         content: message,
       });
       await messageObject.save();
-      console.log(roomId);
 
       io.to(roomId).emit("receive-message", messageObject);
+
+      if (io.sockets.adapter.rooms.get(messageObject.receiver.toString())) {
+        const user: UserInterface = (await UserModel.findById(
+          messageObject.sender
+        ).lean())!;
+        socket
+          .to(messageObject.receiver.toString())
+          .emit("get-new-user", { ...user, latestMessage: messageObject });
+      }
     }
   );
 
