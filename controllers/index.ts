@@ -281,7 +281,7 @@ export const getMessages = expressAsyncHandler(
     const currentUser = req.query.user;
     const selectedUser = req.query.selectedUser;
     const skipAmount = Number(req.query.skipAmount);
-    const LIMIT = 20;
+    const LIMIT = 30;
 
     const messages = await MessageModel.find({
       $or: [
