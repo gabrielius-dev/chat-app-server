@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import createTestServer from "../../testServer";
 const session = require("supertest-session");
 import { MongoMemoryServer } from "mongodb-memory-server";
+import MessageModel from "../../models/message";
 dotenv.config();
 
 let testServer: Server;
@@ -471,5 +472,96 @@ describe("GET /userList", () => {
       userWithoutPassword.lastOnline.toISOString();
 
     expect(response1.body).toEqual([userWithoutPassword]);
+  });
+});
+
+describe("GET /messages", () => {
+  let databaseUser: mongoose.Document;
+  let databaseUser1: mongoose.Document;
+
+  beforeAll(async () => {
+    // Hashed password from bcrypt
+    databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+
+    // Hashed password from bcrypt
+    databaseUser1 = new UserModel({
+      username: "testing_username1",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser1.save();
+  });
+
+  afterAll(async () => {
+    await UserModel.findByIdAndDelete(databaseUser);
+    await UserModel.findByIdAndDelete(databaseUser1);
+  });
+
+  it("Empty messages array", async () => {
+    const testSession = session(testServer);
+
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const response = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const response1 = await testSession
+      .get("/messages")
+      .set("Accept", "application/json");
+
+    expect(response1.status).toBe(200);
+    expect(response1.body).toEqual([]);
+  });
+
+  it("Retrieves messages", async () => {
+    const testSession = session(testServer);
+
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const response = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const message = new MessageModel({
+      sender: databaseUser._id,
+      receiver: databaseUser1._id,
+      content: "Hello test",
+    });
+
+    await message.save();
+
+    const response1 = await testSession
+      .get(
+        `/messages?user=${databaseUser._id}&selectedUser=${databaseUser1._id}&skipAmount=0`
+      )
+      .set("Accept", "application/json");
+
+    expect(response1.status).toBe(200);
+
+    const fixedMessage = {
+      ...message.toObject(),
+      createdAt: message.toObject().createdAt.toISOString(),
+      receiver: message.toObject().receiver.toString(),
+      sender: message.toObject().sender.toString(),
+      _id: message.toObject()._id.toString(),
+    };
+
+    expect(response1.body).toEqual([fixedMessage]);
   });
 });
