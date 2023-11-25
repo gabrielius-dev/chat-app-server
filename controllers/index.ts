@@ -306,13 +306,17 @@ export const getDatabaseUserDetails = expressAsyncHandler(
       res.status(400).json({
         success: false,
         message: "User not found",
+        user: null,
       });
+      return;
     }
 
     const user = await UserModel.findById(req.params.id).exec();
 
     if (!user)
-      res.status(200).json({ success: false, message: "User not found" });
+      res
+        .status(200)
+        .json({ success: false, message: "User not found", user: null });
     else res.status(200).json({ success: true, message: "User found", user });
   }
 );
