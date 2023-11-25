@@ -4,18 +4,11 @@ import logger from "morgan";
 import dotenv from "dotenv";
 import initializePassport from "./configs/passport";
 import session from "express-session";
-import mongoose from "mongoose";
 import passport from "passport";
 import indexRouter from "./routes/index";
 dotenv.config();
 
 function createTestServer(): Application {
-  if (process.env.MONGODB_URI) {
-    mongoose.connect(process.env.MONGODB_URI);
-  } else {
-    console.error("MONGODB_URI environment variable is not defined.");
-  }
-
   const app: Application = express();
 
   let sessionMiddleware;
