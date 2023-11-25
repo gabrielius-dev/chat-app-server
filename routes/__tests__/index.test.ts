@@ -1,16 +1,16 @@
 import request from "supertest";
 import UserModel from "../../models/user";
-import createServer from "../../server";
 import { Server } from "http";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import createTestServer from "../../testServer";
 const session = require("supertest-session");
 dotenv.config();
 
 let testServer: Server;
 
 beforeAll(async () => {
-  const { app } = createServer();
+  const app = createTestServer();
   testServer = app.listen(1234, () => {
     console.log(`Test Server is Fire at http://localhost:1234`);
   });
@@ -341,5 +341,79 @@ describe("GET /user", () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("message", "User not found");
     expect(response.body.user).toBe(null);
+  });
+});
+
+describe("GET /user/:id", () => {
+  let databaseUser: mongoose.Document;
+  let databaseUser1: mongoose.Document;
+
+  beforeAll(async () => {
+    // Hashed password from bcrypt
+    databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+
+    // Hashed password from bcrypt
+    databaseUser1 = new UserModel({
+      username: "testing_username1",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser1.save();
+  });
+
+  afterAll(async () => {
+    await UserModel.findByIdAndDelete(databaseUser);
+    await UserModel.findByIdAndDelete(databaseUser1);
+  });
+
+  it("User doesn't exist", async () => {
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const testSession = session(testServer);
+
+    const response = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const response1 = await testSession
+      .get("/user/FAKE_ID")
+      .set("Accept", "application/json");
+
+    expect(response1.status).toBe(400);
+    expect(response1.body).toHaveProperty("message", "User not found");
+    expect(response1.body.user).toBe(null);
+  });
+
+  it("User exists", async () => {
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const testSession = session(testServer);
+
+    const response = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const response1 = await testSession
+      .get(`/user/${databaseUser1._id}`)
+      .set("Accept", "application/json");
+
+    expect(response1.status).toBe(200);
+    expect(response1.body).toHaveProperty("message", "User found");
+    expect(response1.body.user).not.toBe(null);
   });
 });
