@@ -5,21 +5,27 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import createTestServer from "../../testServer";
 const session = require("supertest-session");
+import { MongoMemoryServer } from "mongodb-memory-server";
 dotenv.config();
 
 let testServer: Server;
+let mongod: MongoMemoryServer;
 
 beforeAll(async () => {
+  mongod = await MongoMemoryServer.create();
+  const uri = mongod.getUri();
+  await mongoose.connect(uri);
+
   const app = createTestServer();
   testServer = app.listen(1234, () => {
     console.log(`Test Server is Fire at http://localhost:1234`);
   });
-  if (process.env.MONGODB_URI) await mongoose.connect(process.env.MONGODB_URI);
 });
 
 afterAll(async () => {
+  await mongod.stop();
+  await mongoose.disconnect();
   testServer.close();
-  await mongoose.connection.close();
 });
 
 describe("POST /sign-up", () => {
