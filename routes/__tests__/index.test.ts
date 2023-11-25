@@ -29,7 +29,6 @@ afterAll(async () => {
 });
 
 describe("POST /sign-up", () => {
-  // UNIT TESTS THAT DON'T COMMUNICATE WITH DATABASE
   describe("Unit tests that don't communicate with database", () => {
     it("Passwords don't match", async () => {
       const user = {
@@ -99,8 +98,6 @@ describe("POST /sign-up", () => {
     });
   });
 
-  // INTEGRATION TESTS WITH REAL DATABASE
-  // TAKES SOME TIME
   describe("Integration tests with real database", () => {
     afterEach(async () => {
       await request(testServer).post("/logout");
@@ -166,7 +163,6 @@ describe("POST /login", () => {
     await UserModel.findByIdAndDelete(databaseUser);
   });
 
-  // UNIT TESTS THAT DON'T COMMUNICATE WITH DATABASE
   describe("Unit tests that don't communicate with database", () => {
     it("Username can't exceed 100 characters", async () => {
       const user = {
@@ -209,8 +205,6 @@ describe("POST /login", () => {
     });
   });
 
-  // INTEGRATION TESTS WITH REAL DATABASE
-  // TAKES SOME TIME
   describe("Integration tests with real database", () => {
     afterEach(async () => {
       await request(testServer).post("/logout");
@@ -421,5 +415,61 @@ describe("GET /user/:id", () => {
     expect(response1.status).toBe(200);
     expect(response1.body).toHaveProperty("message", "User found");
     expect(response1.body.user).not.toBe(null);
+  });
+});
+
+describe("GET /userList", () => {
+  let databaseUser: mongoose.Document;
+  let databaseUser1: mongoose.Document;
+
+  beforeAll(async () => {
+    // Hashed password from bcrypt
+    databaseUser = new UserModel({
+      username: "testing_username",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser.save();
+
+    // Hashed password from bcrypt
+    databaseUser1 = new UserModel({
+      username: "testing_username1",
+      password: "$2b$10$ef2EuqL5GPBnl7LNf5GP9.eLjpgdMr9ukpwG5t3fe91uA7oohiRre",
+    });
+    await databaseUser1.save();
+  });
+
+  afterAll(async () => {
+    await UserModel.findByIdAndDelete(databaseUser);
+    await UserModel.findByIdAndDelete(databaseUser1);
+  });
+
+  it("Retrieves user list correctly", async () => {
+    const user = {
+      username: "testing_username",
+      password: "testing_password",
+    };
+    const testSession = session(testServer);
+
+    const response = await testSession
+      .post("/login")
+      .send(user)
+      .set("Accept", "application/json");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("message", "Login successful");
+
+    const response1 = await testSession
+      .get("/userList")
+      .set("Accept", "application/json");
+
+    expect(response1.status).toBe(200);
+
+    const userWithoutPassword = { ...databaseUser1.toObject() };
+    delete userWithoutPassword.password;
+    userWithoutPassword._id = userWithoutPassword._id.toString();
+    userWithoutPassword.lastOnline =
+      userWithoutPassword.lastOnline.toISOString();
+
+    expect(response1.body).toEqual([userWithoutPassword]);
   });
 });
