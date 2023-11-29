@@ -50,6 +50,16 @@ export const handleConnection = (socket: Socket) => {
           .to(messageObject.receiver.toString())
           .emit("get-new-user", { ...user, latestMessage: messageObject });
       }
+
+      if (io.sockets.adapter.rooms.get(messageObject.sender.toString())) {
+        const user: UserInterface = (await UserModel.findById(
+          messageObject.receiver
+        ).lean())!;
+        io.to(messageObject.sender.toString()).emit("get-new-user", {
+          ...user,
+          latestMessage: messageObject,
+        });
+      }
     }
   );
 
