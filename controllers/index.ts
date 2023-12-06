@@ -4,7 +4,6 @@ import { body, validationResult } from "express-validator";
 import UserModel from "../models/user";
 import expressAsyncHandler from "express-async-handler";
 import passport from "passport";
-import UserInterface from "../models/types/user";
 import mongoose from "mongoose";
 import MessageModel from "../models/message";
 
@@ -303,7 +302,7 @@ export const getMessages = expressAsyncHandler(
 export const getDatabaseUserDetails = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      res.status(400).json({
+      res.status(200).json({
         success: false,
         message: "User not found",
         user: null,
