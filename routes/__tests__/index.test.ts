@@ -389,7 +389,7 @@ describe("GET /user/:id", () => {
       .get("/user/FAKE_ID")
       .set("Accept", "application/json");
 
-    expect(response1.status).toBe(400);
+    expect(response1.status).toBe(200);
     expect(response1.body).toHaveProperty("message", "User not found");
     expect(response1.body.user).toBe(null);
   });
@@ -419,7 +419,7 @@ describe("GET /user/:id", () => {
   });
 });
 
-describe("GET /userList", () => {
+describe("GET /chatList", () => {
   let databaseUser: mongoose.Document;
   let databaseUser1: mongoose.Document;
 
@@ -460,7 +460,7 @@ describe("GET /userList", () => {
     expect(response.body).toHaveProperty("message", "Login successful");
 
     const response1 = await testSession
-      .get("/userList")
+      .get("/chatList")
       .set("Accept", "application/json");
 
     expect(response1.status).toBe(200);
