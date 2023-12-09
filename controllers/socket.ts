@@ -48,14 +48,14 @@ export const handleConnection = (socket: Socket) => {
         ).lean())!;
         socket
           .to(messageObject.receiver.toString())
-          .emit("get-new-user", { ...user, latestMessage: messageObject });
+          .emit("get-new-chat", { ...user, latestMessage: messageObject });
       }
 
       if (io.sockets.adapter.rooms.get(messageObject.sender.toString())) {
         const user: UserInterface = (await UserModel.findById(
           messageObject.receiver
         ).lean())!;
-        io.to(messageObject.sender.toString()).emit("get-new-user", {
+        io.to(messageObject.sender.toString()).emit("get-new-chat", {
           ...user,
           latestMessage: messageObject,
         });
