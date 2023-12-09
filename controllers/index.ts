@@ -200,9 +200,19 @@ export const getUserDetails = expressAsyncHandler(
   }
 );
 
-export const getUserList = expressAsyncHandler(
+export const getChatList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const skipAmount = ((Number(req.query.loadOffset) || 1) - 1) * 10;
+    await UserModel.findByIdAndUpdate(
+      // @ts-ignore
+      req.user._id,
+      {
+        lastOnline: Date.now(),
+        online: true,
+      },
+      { new: true }
+    );
+
+    const LIMIT = (Number(req.query.loadOffset) || 1) * 10;
 
     // @ts-ignore
     const userId = req.user._id;
@@ -259,11 +269,9 @@ export const getUserList = expressAsyncHandler(
           "latestMessage.createdAt": -1,
         },
       },
+
       {
-        $skip: skipAmount,
-      },
-      {
-        $limit: 10,
+        $limit: LIMIT,
       },
       {
         $project: {
