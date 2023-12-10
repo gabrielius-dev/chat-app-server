@@ -4,6 +4,7 @@ import MessageModel from "../models/message";
 import { io } from "..";
 import UserModel from "../models/user";
 import UserInterface from "../models/types/user";
+import { updateUserLastOnline } from "../utils/updateUser";
 
 export const handleAuthentication = (
   socket: Socket,
@@ -33,6 +34,8 @@ export const handleConnection = (socket: Socket) => {
       receiver: string,
       roomId: string
     ) => {
+      await updateUserLastOnline(sender);
+
       const messageObject = new MessageModel({
         sender,
         receiver,
