@@ -1,11 +1,26 @@
+import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { NextFunction, Request, Response } from "express";
-import { body, validationResult } from "express-validator";
+import { body, check, validationResult } from "express-validator";
 import UserModel from "../models/user";
 import expressAsyncHandler from "express-async-handler";
 import passport from "passport";
 import mongoose from "mongoose";
 import MessageModel from "../models/message";
+import { updateUserLastOnline } from "../utils/updateUser";
+import GroupModel from "../models/group";
+import { google } from "googleapis";
+import resizeAndCompressImage from "../utils/resizeImage";
+import streamifier from "streamifier";
+dotenv.config();
+
+const drive = google.drive({
+  version: "v3",
+  auth: new google.auth.GoogleAuth({
+    keyFile: "./configs/google_service_account.json",
+    scopes: ["https://www.googleapis.com/auth/drive"],
+  }),
+});
 
 export const userSignUpPost = [
   body("username")
@@ -202,15 +217,8 @@ export const getUserDetails = expressAsyncHandler(
 
 export const getChatList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    await UserModel.findByIdAndUpdate(
-      // @ts-ignore
-      req.user._id,
-      {
-        lastOnline: Date.now(),
-        online: true,
-      },
-      { new: true }
-    );
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
 
     const LIMIT = (Number(req.query.loadOffset) || 1) * 10;
 
@@ -283,6 +291,104 @@ export const getChatList = expressAsyncHandler(
   }
 );
 
+export const createGroupChat = [
+  check("name")
+    .escape()
+    .trim()
+    .notEmpty()
+    .withMessage("Name must be specified")
+    .isLength({ max: 100 })
+    .withMessage("Name can't exceed 100 characters")
+    .custom(async (value) => {
+      const group = await GroupModel.findOne({ name: value });
+      if (group) throw new Error("Name already exists");
+    }),
+  check("users")
+    .customSanitizer((value) => {
+      return JSON.parse(value);
+    })
+    .isArray({ min: 1 })
+    .withMessage("At least one user must be specified"),
+  check("image").custom((_, { req }) => {
+    if (!req.file || !req.file.mimetype.startsWith("image/")) {
+      throw new Error("Please upload a valid image file");
+    } else return true;
+  }),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const errors = validationResult(req).formatWith((err) => {
+        if (err.type === "field")
+          return {
+            path: err.path,
+            message: err.msg,
+          };
+      });
+
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: "Group creation failed",
+          errors: errors.array(),
+        });
+      } else {
+        try {
+          let imageUrl = null;
+          if (req.file && process.env.GROUP_IMAGES_FOLDER_ID) {
+            const resizedAndCompressedImage = await resizeAndCompressImage(
+              req.file.buffer
+            );
+            const stream = streamifier.createReadStream(
+              resizedAndCompressedImage
+            );
+
+            const response = await drive.files.create({
+              requestBody: {
+                name: req.file.originalname,
+                mimeType: req.file.mimetype,
+                parents: [process.env.GROUP_IMAGES_FOLDER_ID],
+              },
+              fields: "id",
+              media: {
+                mimeType: req.file.mimetype,
+                body: stream,
+              },
+            });
+            if (response.data.id)
+              await drive.permissions.create({
+                fileId: response.data.id,
+                requestBody: {
+                  role: "reader",
+                  type: "anyone",
+                },
+              });
+
+            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+          }
+
+          const group = new GroupModel({
+            name: req.body.name,
+            users: req.body.users,
+            image: imageUrl,
+          });
+          await group.save();
+
+          res.status(200).json({
+            success: true,
+            message: "Group created successfully",
+            group,
+          });
+        } catch (err: any) {
+          res.status(500).json({
+            success: false,
+            message: "Error during group creation",
+            error: err.message,
+          });
+        }
+      }
+    }
+  ),
+];
+
 export const getMessages = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const currentUser = req.query.user;
@@ -309,6 +415,9 @@ export const getMessages = expressAsyncHandler(
 
 export const getDatabaseUserDetails = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       res.status(200).json({
         success: false,
