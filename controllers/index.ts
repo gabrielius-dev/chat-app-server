@@ -389,6 +389,32 @@ export const createGroupChat = [
   ),
 ];
 
+export const getUserList = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const LIMIT = Number(req.query.loadOffset) * 10;
+    const USERNAME = req.query.username;
+
+    let query = {};
+
+    if (USERNAME && typeof USERNAME === "string" && USERNAME.trim() !== "") {
+      const escapedUsername = USERNAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+      query = {
+        username: {
+          $regex: new RegExp(`^${escapedUsername}`, "i"),
+        },
+      };
+    }
+
+    const users = await UserModel.find(query)
+      .collation({ locale: "en", strength: 2 })
+      .sort({ username: 1 })
+      .limit(LIMIT);
+
+    res.status(200).json(users);
+  }
+);
+
 export const getMessages = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const currentUser = req.query.user;
