@@ -5,4 +5,5 @@ export default interface GroupInterface {
   _id: string;
   image?: string;
   users: UserInterface[];
+  createdAt: Date;
 }
