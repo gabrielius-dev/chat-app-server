@@ -309,9 +309,11 @@ export const createGroupChat = [
     })
     .isArray({ min: 1 })
     .withMessage("At least one user must be specified"),
-  check("image").custom((_, { req }) => {
-    if (!req.file || !req.file.mimetype.startsWith("image/")) {
-      throw new Error("Please upload a valid image file");
+  check("image").custom((value, { req }) => {
+    if (value) {
+      if (!req.file || !req.file.mimetype.startsWith("image/")) {
+        throw new Error("Please upload a valid image file");
+      } else return true;
     } else return true;
   }),
   expressAsyncHandler(
@@ -388,6 +390,79 @@ export const createGroupChat = [
     }
   ),
 ];
+
+export const getGroupChatList = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const LIMIT = (Number(req.query.loadOffset) || 1) * 5;
+
+    // @ts-ignore
+    const userId = req.user._id;
+    const result = await GroupModel.aggregate([
+      {
+        $match: {
+          users: userId.toString(),
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          let: { groupId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    {
+                      $and: [
+                        { $eq: ["$sender", userId] },
+                        { $eq: ["$receiver", "$$groupId"] },
+                      ],
+                    },
+                    {
+                      $and: [
+                        { $eq: ["$sender", "$$groupId"] },
+                        { $eq: ["$receiver", userId] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+            {
+              $limit: 1,
+            },
+          ],
+          as: "latestMessage",
+        },
+      },
+      {
+        $unwind: {
+          path: "$latestMessage",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: {
+          "latestMessage.createdAt": -1,
+          createdAt: -1,
+        },
+      },
+      {
+        $limit: LIMIT,
+      },
+      {
+        $project: {
+          users: 0,
+        },
+      },
+    ]);
+
+    res.status(200).json(result);
+  }
+);
 
 export const getUserList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
