@@ -298,11 +298,7 @@ export const createGroupChat = [
     .notEmpty()
     .withMessage("Name must be specified")
     .isLength({ max: 100 })
-    .withMessage("Name can't exceed 100 characters")
-    .custom(async (value) => {
-      const group = await GroupModel.findOne({ name: value });
-      if (group) throw new Error("Name already exists");
-    }),
+    .withMessage("Name can't exceed 100 characters"),
   check("users")
     .customSanitizer((value) => {
       return JSON.parse(value);
