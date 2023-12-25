@@ -291,6 +291,32 @@ export const getChatList = expressAsyncHandler(
   }
 );
 
+export const getGroupChat = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const chatId = req.params.chatId;
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      res.status(200).json({
+        success: false,
+        message: "Group chat not found",
+        groupChat: null,
+      });
+      return;
+    }
+    const groupChat = await GroupModel.findById(chatId).exec();
+
+    if (!groupChat)
+      res.status(400).json({
+        success: false,
+        message: "Group chat not found",
+        groupChat: null,
+      });
+    else
+      res
+        .status(200)
+        .json({ success: true, message: "Group chat found", groupChat });
+  }
+);
+
 export const createGroupChat = [
   check("name")
     .escape()
