@@ -499,6 +499,30 @@ export const getUserList = expressAsyncHandler(
   }
 );
 
+export const getGroupChatMessages = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const groupChat = req.query.groupChat;
+    const skipAmount = Number(req.query.skipAmount);
+    const LIMIT = 30;
+
+    const messages = await MessageModel.find({
+      receiver: groupChat,
+    })
+      .sort({ createdAt: -1 })
+      .skip(skipAmount)
+      .limit(LIMIT)
+      .populate({
+        path: "sender",
+        select: "_id username img",
+      })
+      .exec();
+
+    const sortedMessages = messages.reverse();
+    if (messages.length === 0) res.status(200).json([]);
+    else res.status(200).json(sortedMessages);
+  }
+);
+
 export const getMessages = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const currentUser = req.query.user;
