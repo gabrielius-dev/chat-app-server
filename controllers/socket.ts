@@ -5,6 +5,8 @@ import { io } from "..";
 import UserModel from "../models/user";
 import UserInterface from "../models/types/user";
 import { updateUserLastOnline } from "../utils/updateUser";
+import GroupModel from "../models/group";
+import GroupInterface from "../models/types/group";
 
 export const handleAuthentication = (
   socket: Socket,
@@ -61,6 +63,44 @@ export const handleConnection = (socket: Socket) => {
         io.to(messageObject.sender.toString()).emit("get-new-chat", {
           ...user,
           latestMessage: messageObject,
+        });
+      }
+    }
+  );
+
+  socket.on(
+    "send-group-message",
+    async (
+      message: string,
+      sender: string,
+      receiver: string,
+      roomId: string
+    ) => {
+      await updateUserLastOnline(sender);
+
+      const messageObject = new MessageModel({
+        sender,
+        receiver,
+        content: message,
+      });
+      await messageObject.save();
+
+      const retrievedMessage = await MessageModel.findById(messageObject._id)
+        .populate({
+          path: "sender",
+          select: "_id username img",
+        })
+        .exec();
+
+      io.to(roomId).emit("receive-group-message", retrievedMessage);
+
+      if (io.sockets.adapter.rooms.get(messageObject.receiver.toString())) {
+        const group: GroupInterface = (await GroupModel.findById(
+          messageObject.receiver
+        ).lean())!;
+        io.to(messageObject.receiver.toString()).emit("get-new-group-chat", {
+          ...group,
+          latestMessage: retrievedMessage,
         });
       }
     }
