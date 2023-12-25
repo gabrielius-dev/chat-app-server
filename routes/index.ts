@@ -9,6 +9,7 @@ import {
   getMessages,
   getDatabaseUserDetails,
   editUserDetails,
+  getUserList,
 } from "../controllers";
 import cors from "cors";
 import multer from "multer";
@@ -43,5 +44,6 @@ router.post(
   createGroupChat
 );
 router.get("/messages", corsForRoutes, checkAuth, getMessages);
+router.get("/user-list", corsForRoutes, checkAuth, getUserList);
 
 export default router;
