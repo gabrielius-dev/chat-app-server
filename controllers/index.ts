@@ -407,20 +407,7 @@ export const getGroupChatList = expressAsyncHandler(
             {
               $match: {
                 $expr: {
-                  $or: [
-                    {
-                      $and: [
-                        { $eq: ["$sender", userId] },
-                        { $eq: ["$receiver", "$$groupId"] },
-                      ],
-                    },
-                    {
-                      $and: [
-                        { $eq: ["$sender", "$$groupId"] },
-                        { $eq: ["$receiver", userId] },
-                      ],
-                    },
-                  ],
+                  $eq: ["$receiver", "$$groupId"],
                 },
               },
             },
@@ -429,6 +416,32 @@ export const getGroupChatList = expressAsyncHandler(
             },
             {
               $limit: 1,
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
+              },
+            },
+            {
+              $unwind: {
+                path: "$senderDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                sender: {
+                  _id: "$senderDetails._id",
+                  username: "$senderDetails.username",
+                  img: "$senderDetails.img",
+                },
+                receiver: 1,
+                content: 1,
+                createdAt: 1,
+              },
             },
           ],
           as: "latestMessage",
