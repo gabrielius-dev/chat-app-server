@@ -5,6 +5,7 @@ import {
   userLogOutPost,
   getUserDetails,
   getChatList,
+  getGroupChat,
   createGroupChat,
   getMessages,
   getDatabaseUserDetails,
@@ -37,6 +38,7 @@ router.get("/user", corsForRoutes, getUserDetails);
 router.get("/user/:id", corsForRoutes, checkAuth, getDatabaseUserDetails);
 router.put("/user/:id", corsForRoutes, checkAuth, editUserDetails);
 router.get("/chat-list", corsForRoutes, checkAuth, getChatList);
+router.get("/group-chat/:chatId", corsForRoutes, checkAuth, getGroupChat);
 router.post(
   "/group-chat",
   corsForRoutes,
