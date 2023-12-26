@@ -388,10 +388,12 @@ export const createGroupChat = [
 
             imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
           }
-
+          // @ts-ignore
+          const userId = req.user._id;
+          const users = [userId, ...req.body.users];
           const group = new GroupModel({
             name: req.body.name,
-            users: req.body.users,
+            users,
             image: imageUrl,
           });
           await group.save();
@@ -501,6 +503,8 @@ export const getGroupChatList = expressAsyncHandler(
 
 export const getUserList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    // @ts-ignore
+    const userId = req.user._id;
     const LIMIT = Number(req.query.loadOffset) * 10;
     const USERNAME = req.query.username;
 
@@ -512,6 +516,15 @@ export const getUserList = expressAsyncHandler(
       query = {
         username: {
           $regex: new RegExp(`^${escapedUsername}`, "i"),
+        },
+        _id: {
+          $ne: userId,
+        },
+      };
+    } else {
+      query = {
+        _id: {
+          $ne: userId,
         },
       };
     }
