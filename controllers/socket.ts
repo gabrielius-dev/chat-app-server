@@ -7,6 +7,7 @@ import UserInterface from "../models/types/user";
 import { updateUserLastOnline } from "../utils/updateUser";
 import GroupModel from "../models/group";
 import GroupInterface from "../models/types/group";
+import MessageInterface from "../models/types/message";
 
 export const handleAuthentication = (
   socket: Socket,
@@ -26,6 +27,19 @@ export const handleConnection = (socket: Socket) => {
 
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
+  });
+
+  socket.on("leave-room", (roomId) => {
+    socket.leave(roomId);
+  });
+
+  socket.on("delete-message", async (message: MessageInterface) => {
+    if (io.sockets.adapter.rooms.get(message.receiver.toString())) {
+      socket.to(message.receiver.toString()).emit("message-deleted", message);
+    }
+    if (io.sockets.adapter.rooms.get(message.sender.toString())) {
+      io.to(message.sender.toString()).emit("message-deleted", message);
+    }
   });
 
   socket.on(
