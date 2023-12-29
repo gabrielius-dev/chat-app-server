@@ -609,3 +609,23 @@ export const getDatabaseUserDetails = expressAsyncHandler(
     else res.status(200).json({ success: true, message: "User found", user });
   }
 );
+
+export const deleteMessage = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
+
+    const messageId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      res.status(200).json({
+        success: false,
+        message: "Message not found",
+      });
+      return;
+    } else {
+      await MessageModel.findByIdAndDelete(messageId);
+      res.sendStatus(204);
+    }
+  }
+);
