@@ -230,7 +230,6 @@ export const getChatList = expressAsyncHandler(
           _id: { $ne: userId },
         },
       },
-
       {
         $lookup: {
           from: "messages",
@@ -262,6 +261,56 @@ export const getChatList = expressAsyncHandler(
             {
               $limit: 1,
             },
+            {
+              $lookup: {
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "receiver",
+                foreignField: "_id",
+                as: "receiverDetails",
+              },
+            },
+            {
+              $unwind: {
+                path: "$senderDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: "$receiverDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                sender: {
+                  _id: "$senderDetails._id",
+                  username: "$senderDetails.username",
+                  img: "$senderDetails.img",
+                  online: "$senderDetails.online",
+                  lastOnline: "$senderDetails.lastOnline",
+                  password: "$senderDetails.password",
+                },
+                receiver: {
+                  _id: "$receiverDetails._id",
+                  username: "$receiverDetails.username",
+                  img: "$receiverDetails.img",
+                  online: "$receiverDetails.online",
+                  lastOnline: "$receiverDetails.lastOnline",
+                  password: "$receiverDetails.password",
+                },
+                content: 1,
+                createdAt: 1,
+              },
+            },
           ],
           as: "latestMessage",
         },
@@ -277,7 +326,6 @@ export const getChatList = expressAsyncHandler(
           "latestMessage.createdAt": -1,
         },
       },
-
       {
         $limit: LIMIT,
       },
@@ -577,6 +625,7 @@ export const getMessages = expressAsyncHandler(
     })
       .sort({ createdAt: -1 })
       .skip(skipAmount)
+      .populate("sender receiver")
       .limit(LIMIT)
       .exec();
 
