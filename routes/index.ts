@@ -13,6 +13,7 @@ import {
   getUserList,
   getGroupChatList,
   getGroupChatMessages,
+  deleteMessage,
 } from "../controllers";
 import cors from "cors";
 import multer from "multer";
@@ -51,5 +52,6 @@ router.get("/group-chat-list", corsForRoutes, checkAuth, getGroupChatList);
 router.get("/group-messages", corsForRoutes, checkAuth, getGroupChatMessages);
 router.get("/messages", corsForRoutes, checkAuth, getMessages);
 router.get("/user-list", corsForRoutes, checkAuth, getUserList);
+router.delete("/message/:id", corsForRoutes, checkAuth, deleteMessage);
 
 export default router;
