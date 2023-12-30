@@ -172,14 +172,39 @@ export const handleConnection = (socket: Socket) => {
     }
   );
 
-  socket.on("edit-group-chat", async (groupChat: GroupInterface) => {
-    io.to(groupChat._id).emit("receive-edit-group-chat", groupChat);
+  socket.on(
+    "edit-group-chat",
+    async (groupChat: GroupInterface, prevGroupChat: GroupInterface) => {
+      io.to(groupChat._id).emit("receive-edit-group-chat", groupChat);
 
-    io.to(`group-chat-list-${groupChat._id}`).emit(
-      "receive-edit-group-chat-list",
-      groupChat
-    );
-  });
+      const removedUsers = prevGroupChat.users.filter(
+        (user) => !groupChat.users.includes(user)
+      );
+
+      const newUsers = groupChat.users.filter(
+        (user) => !prevGroupChat.users.includes(user)
+      );
+
+      removedUsers.forEach((user) => {
+        io.to(user).emit("group-chat-removed", {
+          message: `You have been removed from ${groupChat.name} group chat.`,
+          groupChat,
+        });
+      });
+
+      newUsers.forEach((user) => {
+        io.to(user).emit("group-chat-added", {
+          message: `You have been added to ${groupChat.name} group chat.`,
+          groupChat,
+        });
+      });
+
+      io.to(`group-chat-list-${groupChat._id}`).emit(
+        "receive-edit-group-chat-list",
+        groupChat
+      );
+    }
+  );
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
