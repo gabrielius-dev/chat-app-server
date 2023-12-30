@@ -468,6 +468,112 @@ export const createGroupChat = [
   ),
 ];
 
+export const editGroupChat = [
+  check("name")
+    .escape()
+    .trim()
+    .notEmpty()
+    .withMessage("Name must be specified")
+    .isLength({ max: 25 })
+    .withMessage("Name can't exceed 25 characters"),
+  check("users")
+    .customSanitizer((value) => {
+      return JSON.parse(value);
+    })
+    .isArray({ min: 1 })
+    .withMessage("At least one user must be specified"),
+  check("image").custom((value, { req }) => {
+    if (value) {
+      if (!req.file || !req.file.mimetype.startsWith("image/")) {
+        throw new Error("Please upload a valid image file");
+      } else return true;
+    } else return true;
+  }),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const errors = validationResult(req).formatWith((err) => {
+        if (err.type === "field")
+          return {
+            path: err.path,
+            message: err.msg,
+          };
+      });
+
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: "Group creation failed",
+          errors: errors.array(),
+        });
+      } else {
+        try {
+          let imageUrl = null;
+          if (req.file && process.env.GROUP_IMAGES_FOLDER_ID) {
+            const resizedAndCompressedImage = await resizeAndCompressImage(
+              req.file.buffer
+            );
+            const stream = streamifier.createReadStream(
+              resizedAndCompressedImage
+            );
+
+            const response = await drive.files.create({
+              requestBody: {
+                name: req.file.originalname,
+                mimeType: req.file.mimetype,
+                parents: [process.env.GROUP_IMAGES_FOLDER_ID],
+              },
+              fields: "id",
+              media: {
+                mimeType: req.file.mimetype,
+                body: stream,
+              },
+            });
+            if (response.data.id)
+              await drive.permissions.create({
+                fileId: response.data.id,
+                requestBody: {
+                  role: "reader",
+                  type: "anyone",
+                },
+              });
+
+            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+          }
+          // @ts-ignore
+          const userId = req.user._id;
+          const users = [userId, ...req.body.users];
+          const updatedGroup = await GroupModel.findByIdAndUpdate(
+            req.body._id,
+            {
+              name: req.body.name,
+              users,
+              image: imageUrl,
+            },
+            { new: true }
+          ).exec();
+
+          if (updatedGroup) {
+            if (req.body.prevImageId && req.file)
+              await deleteImage(req.body.prevImageId);
+
+            res.status(200).json({
+              success: true,
+              message: "Group created successfully",
+              groupChat: updatedGroup,
+            });
+          }
+        } catch (err: any) {
+          res.status(500).json({
+            success: false,
+            message: "Error during group creation",
+            error: err.message,
+          });
+        }
+      }
+    }
+  ),
+];
+
 export const getGroupChatList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const LIMIT = (Number(req.query.loadOffset) || 1) * 5;
