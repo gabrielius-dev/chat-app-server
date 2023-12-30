@@ -172,6 +172,15 @@ export const handleConnection = (socket: Socket) => {
     }
   );
 
+  socket.on("create-group-chat", async (groupChat: GroupInterface) => {
+    groupChat.users.forEach((user) => {
+      io.to(user).emit("group-chat-added", {
+        message: `You have been added to ${groupChat.name} group chat.`,
+        groupChat,
+      });
+    });
+  });
+
   socket.on(
     "edit-group-chat",
     async (groupChat: GroupInterface, prevGroupChat: GroupInterface) => {
