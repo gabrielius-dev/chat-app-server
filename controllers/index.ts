@@ -446,18 +446,18 @@ export const createGroupChat = [
           // @ts-ignore
           const userId = req.user._id;
           const users = [userId, ...req.body.users];
-          const group = new GroupModel({
+          const groupChat = new GroupModel({
             name: req.body.name,
             creator: userId,
             users,
             image: imageUrl,
           });
-          await group.save();
+          await groupChat.save();
 
           res.status(200).json({
             success: true,
             message: "Group created successfully",
-            group,
+            groupChat,
           });
         } catch (err: any) {
           res.status(500).json({
