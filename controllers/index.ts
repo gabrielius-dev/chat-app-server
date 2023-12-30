@@ -22,6 +22,10 @@ const drive = google.drive({
   }),
 });
 
+async function deleteImage(fileId: string) {
+  await drive.files.delete({ fileId });
+}
+
 export const userSignUpPost = [
   body("username")
     .escape()
@@ -557,13 +561,18 @@ export const getUserList = expressAsyncHandler(
     const LIMIT = Number(req.query.loadOffset) * 10;
     const USERNAME = req.query.username;
     const userList = req.query.userList;
+    const excludeUser = req.query.excludeUser;
     let allUsers;
 
     let query: any = {
       _id: {
-        $ne: userId,
+        $nin: [userId],
       },
     };
+
+    if (excludeUser && excludeUser !== "") {
+      query._id.$nin.push(excludeUser);
+    }
 
     if (USERNAME && typeof USERNAME === "string" && USERNAME.trim() !== "") {
       const escapedUsername = USERNAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -589,12 +598,15 @@ export const getUserList = expressAsyncHandler(
       remainingLimit > 0 &&
       !(USERNAME && typeof USERNAME === "string" && USERNAME.trim() !== "")
     ) {
-      const additionalQuery = {
+      let additionalQuery: any = {
         _id: {
-          $nin: fetchedUsers.map((user) => user._id),
-          $ne: userId,
+          $nin: [userId, ...fetchedUsers.map((user) => user._id)],
         },
       };
+
+      if (excludeUser && excludeUser !== "") {
+        additionalQuery._id.$nin.push(excludeUser);
+      }
 
       const additionalUsers = await UserModel.find(additionalQuery)
         .collation({ locale: "en", strength: 2 })
