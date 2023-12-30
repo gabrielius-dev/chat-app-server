@@ -172,6 +172,15 @@ export const handleConnection = (socket: Socket) => {
     }
   );
 
+  socket.on("edit-group-chat", async (groupChat: GroupInterface) => {
+    io.to(groupChat._id).emit("receive-edit-group-chat", groupChat);
+
+    io.to(`group-chat-list-${groupChat._id}`).emit(
+      "receive-edit-group-chat-list",
+      groupChat
+    );
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
