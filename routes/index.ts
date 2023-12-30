@@ -15,6 +15,7 @@ import {
   getGroupChatMessages,
   deleteMessage,
   editGroupChat,
+  getGroupChatListChat,
 } from "../controllers";
 import cors from "cors";
 import multer from "multer";
@@ -58,6 +59,12 @@ router.put(
   editGroupChat
 );
 router.get("/group-chat-list", corsForRoutes, checkAuth, getGroupChatList);
+router.get(
+  "/group-chat-list-chat/:id",
+  corsForRoutes,
+  checkAuth,
+  getGroupChatListChat
+);
 router.get("/group-messages", corsForRoutes, checkAuth, getGroupChatMessages);
 router.get("/messages", corsForRoutes, checkAuth, getMessages);
 router.get("/user-list", corsForRoutes, checkAuth, getUserList);
