@@ -345,6 +345,9 @@ export const getChatList = expressAsyncHandler(
 
 export const getGroupChat = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
+
     const chatId = req.params.chatId;
     if (!mongoose.Types.ObjectId.isValid(chatId)) {
       res.status(200).json({
@@ -657,6 +660,82 @@ export const getGroupChatList = expressAsyncHandler(
     ]);
 
     res.status(200).json(result);
+  }
+);
+
+export const getGroupChatListChat = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const groupId = req.params.id;
+
+    const result = await GroupModel.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(groupId),
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          let: { groupId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$receiver", "$$groupId"],
+                },
+              },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+            {
+              $limit: 1,
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
+              },
+            },
+            {
+              $unwind: {
+                path: "$senderDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                sender: {
+                  _id: "$senderDetails._id",
+                  username: "$senderDetails.username",
+                  img: "$senderDetails.img",
+                },
+                receiver: 1,
+                content: 1,
+                createdAt: 1,
+              },
+            },
+          ],
+          as: "latestMessage",
+        },
+      },
+      {
+        $unwind: {
+          path: "$latestMessage",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          users: 0,
+        },
+      },
+    ]);
+
+    if (result.length) res.status(200).json(result[0]);
+    else res.status(404);
   }
 );
 
