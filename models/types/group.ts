@@ -6,4 +6,5 @@ export default interface GroupInterface {
   image?: string;
   users: UserInterface[];
   createdAt: Date;
+  creator: string;
 }
