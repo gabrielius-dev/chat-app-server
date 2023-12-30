@@ -441,6 +441,7 @@ export const createGroupChat = [
           const users = [userId, ...req.body.users];
           const group = new GroupModel({
             name: req.body.name,
+            creator: userId,
             users,
             image: imageUrl,
           });
@@ -555,34 +556,57 @@ export const getUserList = expressAsyncHandler(
     const userId = req.user._id;
     const LIMIT = Number(req.query.loadOffset) * 10;
     const USERNAME = req.query.username;
+    const userList = req.query.userList;
+    let allUsers;
 
-    let query = {};
+    let query: any = {
+      _id: {
+        $ne: userId,
+      },
+    };
 
     if (USERNAME && typeof USERNAME === "string" && USERNAME.trim() !== "") {
       const escapedUsername = USERNAME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      query.username = {
+        $regex: new RegExp(`^${escapedUsername}`, "i"),
+      };
+    } else if (Array.isArray(userList) && userList.length > 0) {
+      const userIds = (userList as string[]).map(
+        (id) => new mongoose.Types.ObjectId(id)
+      );
 
-      query = {
-        username: {
-          $regex: new RegExp(`^${escapedUsername}`, "i"),
-        },
-        _id: {
-          $ne: userId,
-        },
-      };
-    } else {
-      query = {
-        _id: {
-          $ne: userId,
-        },
-      };
+      query._id.$in = userIds;
     }
 
-    const users = await UserModel.find(query)
+    const fetchedUsers = await UserModel.find(query)
       .collation({ locale: "en", strength: 2 })
       .sort({ username: 1 })
       .limit(LIMIT);
 
-    res.status(200).json(users);
+    const remainingLimit = LIMIT - fetchedUsers.length;
+
+    if (
+      remainingLimit > 0 &&
+      !(USERNAME && typeof USERNAME === "string" && USERNAME.trim() !== "")
+    ) {
+      const additionalQuery = {
+        _id: {
+          $nin: fetchedUsers.map((user) => user._id),
+          $ne: userId,
+        },
+      };
+
+      const additionalUsers = await UserModel.find(additionalQuery)
+        .collation({ locale: "en", strength: 2 })
+        .sort({ username: 1 })
+        .limit(remainingLimit);
+
+      allUsers = [...fetchedUsers, ...additionalUsers];
+    } else {
+      allUsers = fetchedUsers;
+    }
+
+    res.status(200).json(allUsers);
   }
 );
 
