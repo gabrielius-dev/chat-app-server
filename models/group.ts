@@ -7,6 +7,7 @@ const groupSchema = new Schema(
     image: String,
     users: { type: [String], required: true },
     createdAt: { type: Date, default: Date.now },
+    creator: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { versionKey: false }
 );
