@@ -28,8 +28,8 @@ export const userSignUpPost = [
     .trim()
     .notEmpty()
     .withMessage("Username must be specified")
-    .isLength({ max: 100 })
-    .withMessage("Username can't exceed 100 characters")
+    .isLength({ max: 25 })
+    .withMessage("Username can't exceed 25 characters")
     .custom(async (value) => {
       const user = await UserModel.findOne({ username: value });
       if (user) throw new Error("Username already exists");
@@ -107,8 +107,8 @@ export const userLoginPost = [
     .trim()
     .notEmpty()
     .withMessage("Username must be specified")
-    .isLength({ max: 100 })
-    .withMessage("Username can't exceed 100 characters")
+    .isLength({ max: 25 })
+    .withMessage("Username can't exceed 25 characters")
     .custom(async (value) => {
       const user = await UserModel.findOne({ username: value });
       if (!user) throw new Error("Username doesn't exist");
@@ -371,8 +371,8 @@ export const createGroupChat = [
     .trim()
     .notEmpty()
     .withMessage("Name must be specified")
-    .isLength({ max: 100 })
-    .withMessage("Name can't exceed 100 characters"),
+    .isLength({ max: 25 })
+    .withMessage("Name can't exceed 25 characters"),
   check("users")
     .customSanitizer((value) => {
       return JSON.parse(value);
