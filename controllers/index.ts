@@ -12,6 +12,8 @@ import GroupModel from "../models/group";
 import { google } from "googleapis";
 import resizeAndCompressImage from "../utils/resizeImage";
 import streamifier from "streamifier";
+import GroupInterface from "../models/types/group";
+import extractFileIdFromDriveUrl from "../utils/extractFileIdFromDriveUrl";
 dotenv.config();
 
 const drive = google.drive({
@@ -576,6 +578,34 @@ export const editGroupChat = [
     }
   ),
 ];
+
+export const deleteGroupChat = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
+
+    const groupChatId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupChatId)) {
+      res.status(200).json({
+        success: false,
+        message: "Group chat not found",
+      });
+      return;
+    } else {
+      await MessageModel.deleteMany({ receiver: groupChatId });
+      const deletedGroupChat: GroupInterface | null = await GroupModel.findById(
+        groupChatId
+      );
+      if (deletedGroupChat?.image) {
+        const imageId = extractFileIdFromDriveUrl(deletedGroupChat.image);
+        await deleteImage(imageId);
+      }
+      await GroupModel.findByIdAndDelete(groupChatId);
+      res.sendStatus(204);
+    }
+  }
+);
 
 export const getGroupChatList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
