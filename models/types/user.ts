@@ -5,4 +5,5 @@ export default interface UserInterface {
   lastOnline: Date;
   online: boolean;
   img?: string;
+  bio?: string;
 }
