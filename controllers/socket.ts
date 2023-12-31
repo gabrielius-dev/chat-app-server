@@ -175,7 +175,7 @@ export const handleConnection = (socket: Socket) => {
   socket.on("create-group-chat", async (groupChat: GroupInterface) => {
     groupChat.users.forEach((user) => {
       io.to(user).emit("group-chat-added", {
-        message: `You have been added to ${groupChat.name} group chat.`,
+        message: `You've been added to the '${groupChat.name}' group chat.`,
         groupChat,
       });
     });
@@ -196,14 +196,14 @@ export const handleConnection = (socket: Socket) => {
 
       removedUsers.forEach((user) => {
         io.to(user).emit("group-chat-removed", {
-          message: `You have been removed from ${groupChat.name} group chat.`,
+          message: `You've been removed from the '${groupChat.name}' group chat.`,
           groupChat,
         });
       });
 
       newUsers.forEach((user) => {
         io.to(user).emit("group-chat-added", {
-          message: `You have been added to ${groupChat.name} group chat.`,
+          message: `You've been added to the '${groupChat.name}' group chat.`,
           groupChat,
         });
       });
@@ -214,6 +214,17 @@ export const handleConnection = (socket: Socket) => {
       );
     }
   );
+
+  socket.on("delete-group-chat", async (groupChat: GroupInterface) => {
+    io.to(groupChat._id).emit("receive-delete-group-chat", groupChat);
+
+    groupChat.users.forEach((user) => {
+      io.to(user).emit("group-chat-deleted", {
+        message: `The group chat '${groupChat.name}' has been deleted by the creator of the group. `,
+        groupChat,
+      });
+    });
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
