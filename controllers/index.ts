@@ -547,15 +547,26 @@ export const editGroupChat = [
           // @ts-ignore
           const userId = req.user._id;
           const users = [userId, ...req.body.users];
-          const updatedGroup = await GroupModel.findByIdAndUpdate(
-            req.body._id,
-            {
-              name: req.body.name,
-              users,
-              image: imageUrl,
-            },
-            { new: true }
-          ).exec();
+          let updatedGroup;
+          if (imageUrl)
+            updatedGroup = await GroupModel.findByIdAndUpdate(
+              req.body._id,
+              {
+                name: req.body.name,
+                users,
+                image: imageUrl,
+              },
+              { new: true }
+            ).exec();
+          else
+            updatedGroup = await GroupModel.findByIdAndUpdate(
+              req.body._id,
+              {
+                name: req.body.name,
+                users,
+              },
+              { new: true }
+            ).exec();
 
           if (updatedGroup) {
             if (req.body.prevImageId && req.file)
@@ -929,3 +940,134 @@ export const deleteMessage = expressAsyncHandler(
     }
   }
 );
+
+export const editUserDetails = [
+  check("username")
+    .escape()
+    .trim()
+    .notEmpty()
+    .withMessage("Username must be specified")
+    .isLength({ max: 25 })
+    .withMessage("Username can't exceed 25 characters")
+    .custom(async (value, { req }) => {
+      if (value === req.user.username) {
+        return;
+      }
+      const user = await UserModel.findOne({ username: value });
+      if (user) throw new Error("Username already exists");
+    }),
+  check("bio")
+    .escape()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Bio can't exceed 100 characters"),
+  check("image").custom((value, { req }) => {
+    if (value) {
+      if (!req.file || !req.file.mimetype.startsWith("image/")) {
+        throw new Error("Please upload a valid image file");
+      } else return true;
+    } else return true;
+  }),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const errors = validationResult(req).formatWith((err) => {
+        if (err.type === "field")
+          return {
+            path: err.path,
+            message: err.msg,
+          };
+      });
+
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          message: "User edit failed",
+          errors: errors.array(),
+        });
+      }
+      // @ts-ignore
+      else if (req.user._id.toString() !== req.params.id) {
+        res.status(400).json({
+          success: false,
+          message: "Cannot edit other user",
+          errors: errors.array(),
+        });
+      } else {
+        try {
+          let imageUrl = null;
+          if (req.file && process.env.PROFILE_PICTURES_FOLDER_ID) {
+            const resizedAndCompressedImage = await resizeAndCompressImage(
+              req.file.buffer
+            );
+            const stream = streamifier.createReadStream(
+              resizedAndCompressedImage
+            );
+
+            const response = await drive.files.create({
+              requestBody: {
+                name: req.file.originalname,
+                mimeType: req.file.mimetype,
+                parents: [process.env.PROFILE_PICTURES_FOLDER_ID],
+              },
+              fields: "id",
+              media: {
+                mimeType: req.file.mimetype,
+                body: stream,
+              },
+            });
+            console.log(response.data.id);
+            if (response.data.id)
+              await drive.permissions.create({
+                fileId: response.data.id,
+                requestBody: {
+                  role: "reader",
+                  type: "anyone",
+                },
+              });
+
+            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+          }
+
+          let updatedUser;
+
+          if (imageUrl)
+            updatedUser = await UserModel.findByIdAndUpdate(
+              req.params.id,
+              {
+                username: req.body.username,
+                img: imageUrl,
+                bio: req.body.bio,
+              },
+              { new: true }
+            ).exec();
+          else
+            updatedUser = await UserModel.findByIdAndUpdate(
+              req.params.id,
+              {
+                username: req.body.username,
+                bio: req.body.bio,
+              },
+              { new: true }
+            ).exec();
+
+          if (updatedUser) {
+            if (req.body.prevImageId && req.file)
+              await deleteImage(req.body.prevImageId);
+
+            res.status(200).json({
+              success: true,
+              message: "User profile edited successfully",
+              user: updatedUser,
+            });
+          }
+        } catch (err: any) {
+          res.status(500).json({
+            success: false,
+            message: "Error during group creation",
+            error: err.message,
+          });
+        }
+      }
+    }
+  ),
+];
