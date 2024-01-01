@@ -42,7 +42,13 @@ router.post("/login", corsForRoutes, userLoginPost);
 router.post("/logout", corsForRoutes, checkAuth, userLogOutPost);
 router.get("/user", corsForRoutes, getUserDetails);
 router.get("/user/:id", corsForRoutes, checkAuth, getDatabaseUserDetails);
-router.put("/user/:id", corsForRoutes, checkAuth, editUserDetails);
+router.put(
+  "/user/:id",
+  corsForRoutes,
+  checkAuth,
+  upload.single("image"),
+  editUserDetails
+);
 router.get("/chat-list", corsForRoutes, checkAuth, getChatList);
 router.get("/group-chat/:chatId", corsForRoutes, checkAuth, getGroupChat);
 router.post(
