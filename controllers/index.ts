@@ -17,7 +17,7 @@ dotenv.config();
 
 export const userSignUpPost = [
   body("username")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Username must be specified")
@@ -28,14 +28,14 @@ export const userSignUpPost = [
       if (user) throw new Error("Username already exists");
     }),
   body("password")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Password must be specified")
     .isLength({ max: 100 })
     .withMessage("Password can't exceed 100 characters"),
   body("passwordConfirmation")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Password confirmation must be specified")
@@ -96,7 +96,7 @@ export const userSignUpPost = [
 
 export const userLoginPost = [
   body("username")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Username must be specified")
@@ -107,7 +107,7 @@ export const userLoginPost = [
       if (!user) throw new Error("Username doesn't exist");
     }),
   body("password")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Password must be specified")
@@ -363,7 +363,7 @@ export const getGroupChat = expressAsyncHandler(
 
 export const createGroupChat = [
   check("name")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Name must be specified")
@@ -445,7 +445,7 @@ export const createGroupChat = [
 
 export const editGroupChat = [
   check("name")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Name must be specified")
@@ -466,6 +466,8 @@ export const editGroupChat = [
   }),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      //@ts-ignore
+      await updateUserLastOnline(req.user._id);
       const errors = validationResult(req).formatWith((err) => {
         if (err.type === "field")
           return {
@@ -896,7 +898,7 @@ export const deleteMessage = expressAsyncHandler(
 
 export const editUserDetails = [
   check("username")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .notEmpty()
     .withMessage("Username must be specified")
@@ -904,13 +906,13 @@ export const editUserDetails = [
     .withMessage("Username can't exceed 25 characters")
     .custom(async (value, { req }) => {
       if (value === req.user.username) {
-        return;
+        return true;
       }
       const user = await UserModel.findOne({ username: value });
       if (user) throw new Error("Username already exists");
     }),
   check("bio")
-    .escape()
+    .customSanitizer((value) => decodeURIComponent(value))
     .trim()
     .isLength({ max: 100 })
     .withMessage("Bio can't exceed 100 characters"),
@@ -923,6 +925,9 @@ export const editUserDetails = [
   }),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      //@ts-ignore
+      await updateUserLastOnline(req.user._id);
+
       const errors = validationResult(req).formatWith((err) => {
         if (err.type === "field")
           return {
