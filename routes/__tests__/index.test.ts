@@ -51,10 +51,9 @@ describe("POST /sign-up", () => {
       );
     });
 
-    it("Username can't exceed 100 characters", async () => {
+    it("Username can't exceed 25 characters", async () => {
       const user = {
-        username:
-          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        username: "aaaaaaaaaaaaaaaaaaaaaaaaaa",
         password: "test_password",
         passwordConfirmation: "test_password",
       };
@@ -68,7 +67,7 @@ describe("POST /sign-up", () => {
       expect(response.body).toHaveProperty("message", "Sign up failed");
       expect(response.body.errors[0]).toHaveProperty(
         "message",
-        "Username can't exceed 100 characters"
+        "Username can't exceed 25 characters"
       );
     });
 
@@ -165,10 +164,9 @@ describe("POST /login", () => {
   });
 
   describe("Unit tests that don't communicate with database", () => {
-    it("Username can't exceed 100 characters", async () => {
+    it("Username can't exceed 25 characters", async () => {
       const user = {
-        username:
-          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        username: "aaaaaaaaaaaaaaaaaaaaaaaaaa",
         password: "test_password",
       };
 
@@ -181,7 +179,7 @@ describe("POST /login", () => {
       expect(response.body).toHaveProperty("message", "Login failed");
       expect(response.body.errors[0]).toHaveProperty(
         "message",
-        "Username can't exceed 100 characters"
+        "Username can't exceed 25 characters"
       );
     });
 
@@ -460,7 +458,7 @@ describe("GET /chatList", () => {
     expect(response.body).toHaveProperty("message", "Login successful");
 
     const response1 = await testSession
-      .get("/chatList")
+      .get("/chat-list")
       .set("Accept", "application/json");
 
     expect(response1.status).toBe(200);
@@ -546,6 +544,12 @@ describe("GET /messages", () => {
 
     await message.save();
 
+    const retrievedMessage = (
+      await MessageModel.findById(message._id)
+        .populate("sender receiver")
+        .exec()
+    )?.toObject();
+
     const response1 = await testSession
       .get(
         `/messages?user=${databaseUser._id}&selectedUser=${databaseUser1._id}&skipAmount=0`
@@ -555,11 +559,19 @@ describe("GET /messages", () => {
     expect(response1.status).toBe(200);
 
     const fixedMessage = {
-      ...message.toObject(),
-      createdAt: message.toObject().createdAt.toISOString(),
-      receiver: message.toObject().receiver.toString(),
-      sender: message.toObject().sender.toString(),
-      _id: message.toObject()._id.toString(),
+      ...retrievedMessage,
+      _id: retrievedMessage?._id.toString(),
+      createdAt: retrievedMessage?.createdAt.toISOString(),
+      receiver: {
+        ...retrievedMessage?.receiver,
+        _id: retrievedMessage?.receiver._id.toString(),
+        lastOnline: retrievedMessage?.receiver.lastOnline.toISOString(),
+      },
+      sender: {
+        ...retrievedMessage?.sender,
+        _id: retrievedMessage?.sender._id.toString(),
+        lastOnline: retrievedMessage?.sender.lastOnline.toISOString(),
+      },
     };
 
     expect(response1.body).toEqual([fixedMessage]);
