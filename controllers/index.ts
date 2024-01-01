@@ -9,24 +9,11 @@ import mongoose from "mongoose";
 import MessageModel from "../models/message";
 import { updateUserLastOnline } from "../utils/updateUser";
 import GroupModel from "../models/group";
-import { google } from "googleapis";
-import resizeAndCompressImage from "../utils/resizeImage";
-import streamifier from "streamifier";
 import GroupInterface from "../models/types/group";
-import extractFileIdFromDriveUrl from "../utils/extractFileIdFromDriveUrl";
+import cloudinary from "../configs/cloudinary.config";
+import uploadToCloudinary from "../utils/uploadToCloudinary";
+import getPublicIdFromUrl from "../utils/getPublicIdFromUrl";
 dotenv.config();
-
-const drive = google.drive({
-  version: "v3",
-  auth: new google.auth.GoogleAuth({
-    keyFile: "./configs/google_service_account.json",
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  }),
-});
-
-async function deleteImage(fileId: string) {
-  await drive.files.delete({ fileId });
-}
 
 export const userSignUpPost = [
   body("username")
@@ -414,36 +401,19 @@ export const createGroupChat = [
       } else {
         try {
           let imageUrl = null;
-          if (req.file && process.env.GROUP_IMAGES_FOLDER_ID) {
-            const resizedAndCompressedImage = await resizeAndCompressImage(
+          if (req.file) {
+            const uploadedImage = await uploadToCloudinary(
+              {
+                resource_type: "image",
+                folder: "group_avatars",
+                transformation: [{ width: 50, height: 50, crop: "limit" }],
+              },
               req.file.buffer
             );
-            const stream = streamifier.createReadStream(
-              resizedAndCompressedImage
-            );
 
-            const response = await drive.files.create({
-              requestBody: {
-                name: req.file.originalname,
-                mimeType: req.file.mimetype,
-                parents: [process.env.GROUP_IMAGES_FOLDER_ID],
-              },
-              fields: "id",
-              media: {
-                mimeType: req.file.mimetype,
-                body: stream,
-              },
-            });
-            if (response.data.id)
-              await drive.permissions.create({
-                fileId: response.data.id,
-                requestBody: {
-                  role: "reader",
-                  type: "anyone",
-                },
-              });
-
-            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+            if (uploadedImage) {
+              imageUrl = uploadedImage.url;
+            }
           }
           // @ts-ignore
           const userId = req.user._id;
@@ -513,36 +483,19 @@ export const editGroupChat = [
       } else {
         try {
           let imageUrl = null;
-          if (req.file && process.env.GROUP_IMAGES_FOLDER_ID) {
-            const resizedAndCompressedImage = await resizeAndCompressImage(
+          if (req.file) {
+            const uploadedImage = await uploadToCloudinary(
+              {
+                resource_type: "image",
+                folder: "group_avatars",
+                transformation: [{ width: 50, height: 50, crop: "limit" }],
+              },
               req.file.buffer
             );
-            const stream = streamifier.createReadStream(
-              resizedAndCompressedImage
-            );
 
-            const response = await drive.files.create({
-              requestBody: {
-                name: req.file.originalname,
-                mimeType: req.file.mimetype,
-                parents: [process.env.GROUP_IMAGES_FOLDER_ID],
-              },
-              fields: "id",
-              media: {
-                mimeType: req.file.mimetype,
-                body: stream,
-              },
-            });
-            if (response.data.id)
-              await drive.permissions.create({
-                fileId: response.data.id,
-                requestBody: {
-                  role: "reader",
-                  type: "anyone",
-                },
-              });
-
-            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+            if (uploadedImage) {
+              imageUrl = uploadedImage.url;
+            }
           }
           // @ts-ignore
           const userId = req.user._id;
@@ -570,7 +523,7 @@ export const editGroupChat = [
 
           if (updatedGroup) {
             if (req.body.prevImageId && req.file)
-              await deleteImage(req.body.prevImageId);
+              await cloudinary.uploader.destroy(req.body.prevImageId);
 
             res.status(200).json({
               success: true,
@@ -609,8 +562,8 @@ export const deleteGroupChat = expressAsyncHandler(
         groupChatId
       );
       if (deletedGroupChat?.image) {
-        const imageId = extractFileIdFromDriveUrl(deletedGroupChat.image);
-        await deleteImage(imageId);
+        const imageId = getPublicIdFromUrl(deletedGroupChat.image);
+        await cloudinary.uploader.destroy(imageId);
       }
       await GroupModel.findByIdAndDelete(groupChatId);
       res.sendStatus(204);
@@ -995,37 +948,19 @@ export const editUserDetails = [
       } else {
         try {
           let imageUrl = null;
-          if (req.file && process.env.PROFILE_PICTURES_FOLDER_ID) {
-            const resizedAndCompressedImage = await resizeAndCompressImage(
+          if (req.file) {
+            const uploadedImage = await uploadToCloudinary(
+              {
+                resource_type: "image",
+                folder: "profile_pics",
+                transformation: [{ width: 100, height: 100, crop: "limit" }],
+              },
               req.file.buffer
             );
-            const stream = streamifier.createReadStream(
-              resizedAndCompressedImage
-            );
 
-            const response = await drive.files.create({
-              requestBody: {
-                name: req.file.originalname,
-                mimeType: req.file.mimetype,
-                parents: [process.env.PROFILE_PICTURES_FOLDER_ID],
-              },
-              fields: "id",
-              media: {
-                mimeType: req.file.mimetype,
-                body: stream,
-              },
-            });
-            console.log(response.data.id);
-            if (response.data.id)
-              await drive.permissions.create({
-                fileId: response.data.id,
-                requestBody: {
-                  role: "reader",
-                  type: "anyone",
-                },
-              });
-
-            imageUrl = `https://drive.google.com/uc?export=view&id=${response.data.id}`;
+            if (uploadedImage) {
+              imageUrl = uploadedImage.url;
+            }
           }
 
           let updatedUser;
@@ -1052,7 +987,7 @@ export const editUserDetails = [
 
           if (updatedUser) {
             if (req.body.prevImageId && req.file)
-              await deleteImage(req.body.prevImageId);
+              await cloudinary.uploader.destroy(req.body.prevImageId);
 
             res.status(200).json({
               success: true,
