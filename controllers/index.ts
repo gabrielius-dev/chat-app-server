@@ -406,7 +406,6 @@ export const createGroupChat = [
               {
                 resource_type: "image",
                 folder: "group_avatars",
-                transformation: [{ width: 50, height: 50, crop: "limit" }],
               },
               req.file.buffer
             );
@@ -490,7 +489,6 @@ export const editGroupChat = [
               {
                 resource_type: "image",
                 folder: "group_avatars",
-                transformation: [{ width: 50, height: 50, crop: "limit" }],
               },
               req.file.buffer
             );
@@ -958,7 +956,6 @@ export const editUserDetails = [
               {
                 resource_type: "image",
                 folder: "profile_pics",
-                transformation: [{ width: 100, height: 100, crop: "limit" }],
               },
               req.file.buffer
             );
