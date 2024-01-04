@@ -13,6 +13,8 @@ import GroupInterface from "../models/types/group";
 import cloudinary from "../configs/cloudinary.config";
 import uploadToCloudinary from "../utils/uploadToCloudinary";
 import getPublicIdFromUrl from "../utils/getPublicIdFromUrl";
+import { io } from "..";
+import MessageInterface from "../models/types/message";
 dotenv.config();
 
 export const userSignUpPost = [
@@ -301,6 +303,7 @@ export const getChatList = expressAsyncHandler(
                   password: "$receiverDetails.password",
                 },
                 content: 1,
+                images: 1,
                 createdAt: 1,
               },
             },
@@ -317,6 +320,7 @@ export const getChatList = expressAsyncHandler(
       {
         $sort: {
           "latestMessage.createdAt": -1,
+          lastOnline: -1,
         },
       },
       {
@@ -624,6 +628,7 @@ export const getGroupChatList = expressAsyncHandler(
                 },
                 receiver: 1,
                 content: 1,
+                images: 1,
                 createdAt: 1,
               },
             },
@@ -708,6 +713,7 @@ export const getGroupChatListChat = expressAsyncHandler(
                 },
                 receiver: 1,
                 content: 1,
+                images: 1,
                 createdAt: 1,
               },
             },
@@ -874,6 +880,102 @@ export const getDatabaseUserDetails = expressAsyncHandler(
   }
 );
 
+export const createMessage = [
+  check("message").customSanitizer((value) => decodeURIComponent(value)),
+  check("sender").customSanitizer((value) => decodeURIComponent(value)),
+  check("receiver").customSanitizer((value) => decodeURIComponent(value)),
+  check("roomId").customSanitizer((value) => decodeURIComponent(value)),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        //@ts-ignore
+        await updateUserLastOnline(req.user._id);
+        const { sender, receiver, message, roomId } = req.body;
+
+        if (message) {
+          const messageObject = new MessageModel({
+            sender,
+            receiver,
+            content: message,
+          });
+
+          await messageObject.save();
+
+          const retrievedMessage: MessageInterface =
+            (await MessageModel.findById(messageObject._id)
+              .populate("sender receiver")
+              .lean()
+              .exec())!;
+
+          io.to(roomId).emit("receive-message", retrievedMessage);
+
+          io.to(retrievedMessage.receiver._id.toString()).emit("get-new-chat", {
+            ...retrievedMessage.sender,
+            latestMessage: retrievedMessage,
+          });
+
+          io.to(retrievedMessage.sender._id.toString()).emit("get-new-chat", {
+            ...retrievedMessage.receiver,
+            latestMessage: retrievedMessage,
+          });
+        }
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        if (files && files.length > 0) {
+          const images = [];
+
+          for (const image of files) {
+            const uploadedImage = await uploadToCloudinary(
+              {
+                resource_type: "image",
+                folder: "messages",
+              },
+              image.buffer
+            );
+
+            if (uploadedImage) {
+              const { width, height, url } = uploadedImage;
+              images.push({ width, height, url });
+            }
+          }
+
+          const messageObject = new MessageModel({
+            sender,
+            receiver,
+            images,
+          });
+          await messageObject.save();
+
+          const retrievedMessage: MessageInterface =
+            (await MessageModel.findById(messageObject._id)
+              .populate("sender receiver")
+              .lean()
+              .exec())!;
+
+          io.to(roomId).emit("receive-message", retrievedMessage);
+
+          io.to(retrievedMessage.receiver._id.toString()).emit("get-new-chat", {
+            ...retrievedMessage.sender,
+            latestMessage: retrievedMessage,
+          });
+
+          io.to(retrievedMessage.sender._id.toString()).emit("get-new-chat", {
+            ...retrievedMessage.receiver,
+            latestMessage: retrievedMessage,
+          });
+        }
+        res.sendStatus(200);
+      } catch (err: any) {
+        res.status(500).json({
+          success: false,
+          message: "Error during message sending",
+          error: err.message,
+        });
+      }
+    }
+  ),
+];
+
 export const deleteMessage = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     //@ts-ignore
@@ -888,7 +990,19 @@ export const deleteMessage = expressAsyncHandler(
       });
       return;
     } else {
+      const message: MessageInterface = (await MessageModel.findById(
+        messageId
+      ))!;
+
+      if (message.images && message.images.length > 0) {
+        for (const image of message.images) {
+          const imageId = getPublicIdFromUrl(image.url);
+          await cloudinary.uploader.destroy(imageId);
+        }
+      }
+
       await MessageModel.findByIdAndDelete(messageId);
+
       res.sendStatus(204);
     }
   }
