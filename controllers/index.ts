@@ -976,6 +976,122 @@ export const createMessage = [
   ),
 ];
 
+export const createGroupMessage = [
+  check("message").customSanitizer((value) => decodeURIComponent(value)),
+  check("sender").customSanitizer((value) => decodeURIComponent(value)),
+  check("receiver").customSanitizer((value) => decodeURIComponent(value)),
+  check("roomId").customSanitizer((value) => decodeURIComponent(value)),
+  expressAsyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        //@ts-ignore
+        await updateUserLastOnline(req.user._id);
+        const { sender, receiver, message, roomId } = req.body;
+
+        if (message) {
+          const messageObject = new MessageModel({
+            sender,
+            receiver,
+            content: message,
+          });
+
+          await messageObject.save();
+
+          const retrievedMessage: MessageInterface =
+            (await MessageModel.findById(messageObject._id)
+              .populate({
+                path: "sender",
+                select: "_id username img",
+              })
+              .lean()
+              .exec())!;
+
+          io.to(roomId).emit("receive-group-message", retrievedMessage);
+
+          if (
+            io.sockets.adapter.rooms.get(
+              `group-chat-list-${messageObject.receiver.toString()}`
+            )
+          ) {
+            const group: GroupInterface = (await GroupModel.findById(
+              messageObject.receiver
+            ).lean())!;
+            io.to(`group-chat-list-${messageObject.receiver.toString()}`).emit(
+              "get-new-group-chat",
+              {
+                ...group,
+                latestMessage: retrievedMessage,
+              }
+            );
+          }
+        }
+        const files = req.files as Express.Multer.File[] | undefined;
+
+        if (files && files.length > 0) {
+          const images = [];
+
+          for (const image of files) {
+            const uploadedImage = await uploadToCloudinary(
+              {
+                resource_type: "image",
+                folder: "messages",
+              },
+              image.buffer
+            );
+
+            if (uploadedImage) {
+              const { width, height, url } = uploadedImage;
+              images.push({ width, height, url });
+            }
+          }
+
+          const messageObject = new MessageModel({
+            sender,
+            receiver,
+            images,
+          });
+          await messageObject.save();
+
+          const retrievedMessage: MessageInterface =
+            (await MessageModel.findById(messageObject._id)
+              .populate({
+                path: "sender",
+                select: "_id username img",
+              })
+              .lean()
+              .exec())!;
+
+          io.to(roomId).emit("receive-group-message", retrievedMessage);
+
+          if (
+            io.sockets.adapter.rooms.get(
+              `group-chat-list-${messageObject.receiver.toString()}`
+            )
+          ) {
+            const group: GroupInterface = (await GroupModel.findById(
+              messageObject.receiver
+            ).lean())!;
+            io.to(`group-chat-list-${messageObject.receiver.toString()}`).emit(
+              "get-new-group-chat",
+              {
+                ...group,
+                latestMessage: retrievedMessage,
+              }
+            );
+          }
+        }
+        res.sendStatus(200);
+      } catch (err: any) {
+        res.status(500).json({
+          success: false,
+          message: "Error during message sending",
+          error: err.message,
+        });
+      }
+    }
+  ),
+];
+
 export const deleteMessage = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     //@ts-ignore
