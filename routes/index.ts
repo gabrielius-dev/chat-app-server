@@ -17,6 +17,7 @@ import {
   editGroupChat,
   getGroupChatListChat,
   deleteGroupChat,
+  createMessage,
 } from "../controllers";
 import cors from "cors";
 import multer from "multer";
@@ -76,6 +77,13 @@ router.get(
 router.get("/group-messages", corsForRoutes, checkAuth, getGroupChatMessages);
 router.get("/messages", corsForRoutes, checkAuth, getMessages);
 router.get("/user-list", corsForRoutes, checkAuth, getUserList);
+router.post(
+  "/message",
+  corsForRoutes,
+  checkAuth,
+  upload.array("images"),
+  createMessage
+);
 router.delete("/message/:id", corsForRoutes, checkAuth, deleteMessage);
 
 export default router;
