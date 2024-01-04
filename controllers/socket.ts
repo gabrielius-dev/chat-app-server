@@ -1,9 +1,6 @@
 import { Socket } from "socket.io";
 import { ExtendedError } from "socket.io/dist/namespace";
-import MessageModel from "../models/message";
 import { io } from "..";
-import { updateUserLastOnline } from "../utils/updateUser";
-import GroupModel from "../models/group";
 import GroupInterface from "../models/types/group";
 import MessageInterface, {
   GroupMessageInterface,
@@ -77,126 +74,6 @@ export const handleConnection = (socket: Socket) => {
           message,
           latestMessage
         );
-      }
-    }
-  );
-
-  socket.on(
-    "send-message",
-    async (
-      message: string,
-      sender: string,
-      receiver: string,
-      roomId: string
-    ) => {
-      if (
-        typeof message !== "string" ||
-        typeof sender !== "string" ||
-        typeof receiver !== "string" ||
-        typeof roomId !== "string"
-      ) {
-        io.to(sender).emit("message-error", {
-          message: "Invalid input parameters",
-        });
-        return;
-      }
-      try {
-        await updateUserLastOnline(sender);
-
-        const messageObject = new MessageModel({
-          sender,
-          receiver,
-          content: message,
-        });
-        await messageObject.save();
-
-        const retrievedMessage = await MessageModel.findById(messageObject._id)
-          .populate("sender receiver")
-          .exec();
-
-        io.to(roomId).emit("receive-message", retrievedMessage);
-
-        if (io.sockets.adapter.rooms.get(messageObject.receiver.toString())) {
-          const user = retrievedMessage?.toObject().sender;
-          socket.to(messageObject.receiver.toString()).emit("get-new-chat", {
-            ...user,
-            latestMessage: retrievedMessage,
-          });
-        }
-
-        if (io.sockets.adapter.rooms.get(messageObject.sender.toString())) {
-          const user = retrievedMessage?.toObject().receiver;
-          io.to(messageObject.sender.toString()).emit("get-new-chat", {
-            ...user,
-            latestMessage: retrievedMessage,
-          });
-        }
-      } catch (err) {
-        io.to(sender).emit("message-error", {
-          message: "Failed to send message",
-        });
-      }
-    }
-  );
-
-  socket.on(
-    "send-group-message",
-    async (
-      message: string,
-      sender: string,
-      receiver: string,
-      roomId: string
-    ) => {
-      if (
-        typeof message !== "string" ||
-        typeof sender !== "string" ||
-        typeof receiver !== "string" ||
-        typeof roomId !== "string"
-      ) {
-        io.to(receiver).emit("group-message-error", {
-          message: "Invalid input parameters",
-        });
-        return;
-      }
-      try {
-        await updateUserLastOnline(sender);
-
-        const messageObject = new MessageModel({
-          sender,
-          receiver,
-          content: message,
-        });
-        await messageObject.save();
-
-        const retrievedMessage = await MessageModel.findById(messageObject._id)
-          .populate({
-            path: "sender",
-            select: "_id username img",
-          })
-          .exec();
-
-        io.to(roomId).emit("receive-group-message", retrievedMessage);
-
-        if (
-          io.sockets.adapter.rooms.get(
-            `group-chat-list-${messageObject.receiver.toString()}`
-          )
-        ) {
-          const group: GroupInterface = (await GroupModel.findById(
-            messageObject.receiver
-          ).lean())!;
-          io.to(`group-chat-list-${messageObject.receiver.toString()}`).emit(
-            "get-new-group-chat",
-            {
-              ...group,
-              latestMessage: retrievedMessage,
-            }
-          );
-        }
-      } catch (err) {
-        io.to(receiver).emit("group-message-error", {
-          message: "Failed to send group message",
-        });
       }
     }
   );
