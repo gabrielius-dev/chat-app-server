@@ -951,6 +951,7 @@ export const createMessage = [
         const files = req.files as Express.Multer.File[] | undefined;
 
         if (files && files.length > 0) {
+          const createdAt = Date.now();
           const images = [];
 
           for (const image of files) {
@@ -972,6 +973,7 @@ export const createMessage = [
             sender,
             receiver,
             images,
+            createdAt,
           });
           await messageObject.save();
 
@@ -1057,6 +1059,7 @@ export const createGroupMessage = [
         const files = req.files as Express.Multer.File[] | undefined;
 
         if (files && files.length > 0) {
+          const createdAt = Date.now();
           const images = [];
 
           for (const image of files) {
@@ -1078,6 +1081,7 @@ export const createGroupMessage = [
             sender,
             receiver,
             images,
+            createdAt,
           });
           await messageObject.save();
 
