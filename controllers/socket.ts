@@ -121,17 +121,6 @@ export const handleConnection = (socket: Socket) => {
     }
   );
 
-  socket.on("delete-group-chat", async (groupChat: GroupInterface) => {
-    io.to(groupChat._id).emit("receive-delete-group-chat", groupChat);
-
-    groupChat.users.forEach((user) => {
-      io.to(user).emit("group-chat-deleted", {
-        message: `The group chat '${groupChat.name}' has been deleted by the creator of the group. `,
-        groupChat,
-      });
-    });
-  });
-
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
