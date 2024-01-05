@@ -561,15 +561,44 @@ export const deleteGroupChat = expressAsyncHandler(
       });
       return;
     } else {
-      await MessageModel.deleteMany({ receiver: groupChatId });
       const deletedGroupChat: GroupInterface | null = await GroupModel.findById(
         groupChatId
-      );
+      ).lean();
       if (deletedGroupChat?.image) {
         const imageId = getPublicIdFromUrl(deletedGroupChat.image);
         await cloudinary.uploader.destroy(imageId);
       }
       await GroupModel.findByIdAndDelete(groupChatId);
+
+      if (deletedGroupChat) {
+        io.to(deletedGroupChat._id.toString()).emit(
+          "receive-delete-group-chat",
+          deletedGroupChat
+        );
+
+        deletedGroupChat.users.forEach((user) => {
+          io.to(user).emit("group-chat-deleted", {
+            message: `The group chat '${deletedGroupChat.name}' has been deleted by the creator of the group. `,
+            groupChat: deletedGroupChat,
+          });
+        });
+      }
+
+      const messagesToDelete: MessageInterface[] = await MessageModel.find({
+        receiver: groupChatId,
+      });
+
+      for (const message of messagesToDelete) {
+        if (message.images && message.images.length > 0) {
+          for (const image of message.images) {
+            const imageId = getPublicIdFromUrl(image.url);
+            await cloudinary.uploader.destroy(imageId);
+          }
+        }
+      }
+
+      await MessageModel.deleteMany({ receiver: groupChatId });
+
       res.sendStatus(204);
     }
   }
