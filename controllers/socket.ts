@@ -20,8 +20,6 @@ export const handleAuthentication = (
 };
 
 export const handleConnection = (socket: Socket) => {
-  console.log("A user connected");
-
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
   });
@@ -121,7 +119,5 @@ export const handleConnection = (socket: Socket) => {
     }
   );
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
+  socket.on("disconnect", () => {});
 };
