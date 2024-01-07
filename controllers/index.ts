@@ -764,7 +764,7 @@ export const getGroupChatListChat = expressAsyncHandler(
     ]);
 
     if (result.length) res.status(200).json(result[0]);
-    else res.status(404);
+    else res.sendStatus(404);
   }
 );
 
@@ -1156,6 +1156,55 @@ export const deleteMessage = expressAsyncHandler(
     await updateUserLastOnline(req.user._id);
 
     const messageId = req.params.id;
+    const { isLatestMessageDeleted } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      res.status(200).json({
+        success: false,
+        message: "Message not found",
+      });
+      return;
+    } else {
+      const message: MessageInterface = (await MessageModel.findById(messageId)
+        .populate("sender receiver")
+        .lean())!;
+
+      if (message.images && message.images.length > 0) {
+        for (const image of message.images) {
+          const imageId = getPublicIdFromUrl(image.url);
+          await cloudinary.uploader.destroy(imageId);
+        }
+      }
+
+      await MessageModel.findByIdAndDelete(messageId);
+
+      io.to(message.receiver._id.toString()).emit("message-deleted", message);
+      io.to(message.sender._id.toString()).emit("message-deleted", message);
+      if (isLatestMessageDeleted === "true") {
+        io.to(message.receiver._id.toString()).emit(
+          "message-deleted-chat-list",
+          message
+        );
+
+        io.to(message.sender._id.toString()).emit(
+          "message-deleted-chat-list",
+          message
+        );
+      }
+
+      res.sendStatus(204);
+    }
+  }
+);
+
+export const deleteGroupMessage = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    //@ts-ignore
+    await updateUserLastOnline(req.user._id);
+
+    const messageId = req.params.id;
+
+    const { isLatestMessageDeleted } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(messageId)) {
       res.status(200).json({
@@ -1176,6 +1225,15 @@ export const deleteMessage = expressAsyncHandler(
       }
 
       await MessageModel.findByIdAndDelete(messageId);
+
+      io.to(message.receiver.toString()).emit("group-message-deleted", message);
+
+      if (isLatestMessageDeleted === "true") {
+        io.to(`group-chat-list-${message.receiver.toString()}`).emit(
+          "group-message-deleted-group-chat-list",
+          message
+        );
+      }
 
       res.sendStatus(204);
     }
