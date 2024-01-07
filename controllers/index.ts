@@ -552,6 +552,13 @@ export const createGroupChat = [
           });
           await groupChat.save();
 
+          groupChat.users.forEach((user) => {
+            io.to(user).emit("group-chat-added", {
+              message: `You've been added to the '${groupChat.name}' group chat.`,
+              groupChat,
+            });
+          });
+
           res.status(200).json({
             success: true,
             message: "Group created successfully",
@@ -624,12 +631,19 @@ export const editGroupChat = [
               imageUrl = uploadedImage.url;
             }
           }
+
+          const prevGroupChat: GroupInterface = (await GroupModel.findById(
+            req.body._id
+          )
+            .lean()
+            .exec())!;
+
           // @ts-ignore
           const userId = req.user._id;
           const users = [userId, ...req.body.users];
           let updatedGroup;
           if (imageUrl)
-            updatedGroup = await GroupModel.findByIdAndUpdate(
+            updatedGroup = (await GroupModel.findByIdAndUpdate(
               req.body._id,
               {
                 name: req.body.name,
@@ -637,20 +651,54 @@ export const editGroupChat = [
                 image: imageUrl,
               },
               { new: true }
-            ).exec();
+            ).exec())!;
           else
-            updatedGroup = await GroupModel.findByIdAndUpdate(
+            updatedGroup = (await GroupModel.findByIdAndUpdate(
               req.body._id,
               {
                 name: req.body.name,
                 users,
               },
               { new: true }
-            ).exec();
+            ).exec())!;
+
+          const updatedGroupObject: GroupInterface = updatedGroup.toObject();
 
           if (updatedGroup) {
             if (req.body.prevImageId && req.file)
               await cloudinary.uploader.destroy(req.body.prevImageId);
+
+            io.to(updatedGroupObject._id.toString()).emit(
+              "receive-edit-group-chat",
+              updatedGroupObject
+            );
+
+            const removedUsers = prevGroupChat.users.filter(
+              (user) => !updatedGroupObject.users.includes(user)
+            );
+
+            const newUsers = updatedGroupObject.users.filter(
+              (user) => !prevGroupChat.users.includes(user)
+            );
+
+            removedUsers.forEach((user) => {
+              io.to(user).emit("group-chat-removed", {
+                message: `You've been removed from the '${updatedGroupObject.name}' group chat.`,
+                groupChat: updatedGroupObject,
+              });
+            });
+
+            newUsers.forEach((user) => {
+              io.to(user).emit("group-chat-added", {
+                message: `You've been added to the '${updatedGroupObject.name}' group chat.`,
+                groupChat: updatedGroupObject,
+              });
+            });
+
+            io.to(`group-chat-list-${updatedGroupObject._id.toString()}`).emit(
+              "receive-edit-group-chat-list",
+              updatedGroupObject
+            );
 
             res.status(200).json({
               success: true,
