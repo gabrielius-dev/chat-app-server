@@ -14,6 +14,7 @@ const messageSchema = new Schema(
     content: { type: String },
     images: { type: [imageSchema] },
     createdAt: { type: Date, default: Date.now },
+    sendingIndicatorId: { type: String, default: undefined, unique: true },
   },
   { versionKey: false }
 );
