@@ -919,13 +919,17 @@ export const createMessage = [
       try {
         //@ts-ignore
         await updateUserLastOnline(req.user._id);
-        const { sender, receiver, message, roomId } = req.body;
+        const { sender, receiver, message, sendingIndicatorId, roomId } =
+          req.body;
+
+        let { createdAt } = req.body;
 
         if (message) {
           const messageObject = new MessageModel({
             sender,
             receiver,
             content: message,
+            createdAt,
           });
 
           await messageObject.save();
@@ -951,7 +955,6 @@ export const createMessage = [
         const files = req.files as Express.Multer.File[] | undefined;
 
         if (files && files.length > 0) {
-          const createdAt = Date.now();
           const images = [];
 
           for (const image of files) {
@@ -968,12 +971,21 @@ export const createMessage = [
               images.push({ width, height, url });
             }
           }
+          //If text message exists show image(s) message first
+          if (message) {
+            let currentTimestampNumeric = parseInt(createdAt);
+
+            let newTimestampNumeric = currentTimestampNumeric - 1;
+
+            createdAt = newTimestampNumeric.toString();
+          }
 
           const messageObject = new MessageModel({
             sender,
             receiver,
             images,
             createdAt,
+            sendingIndicatorId,
           });
           await messageObject.save();
 
@@ -1017,13 +1029,17 @@ export const createGroupMessage = [
       try {
         //@ts-ignore
         await updateUserLastOnline(req.user._id);
-        const { sender, receiver, message, roomId } = req.body;
+        const { sender, receiver, message, roomId, sendingIndicatorId } =
+          req.body;
+
+        let { createdAt } = req.body;
 
         if (message) {
           const messageObject = new MessageModel({
             sender,
             receiver,
             content: message,
+            createdAt,
           });
 
           await messageObject.save();
@@ -1059,7 +1075,6 @@ export const createGroupMessage = [
         const files = req.files as Express.Multer.File[] | undefined;
 
         if (files && files.length > 0) {
-          const createdAt = Date.now();
           const images = [];
 
           for (const image of files) {
@@ -1077,11 +1092,21 @@ export const createGroupMessage = [
             }
           }
 
+          //If text message exists show image(s) message first
+          if (message) {
+            let currentTimestampNumeric = parseInt(createdAt);
+
+            let newTimestampNumeric = currentTimestampNumeric - 1;
+
+            createdAt = newTimestampNumeric.toString();
+          }
+
           const messageObject = new MessageModel({
             sender,
             receiver,
             images,
             createdAt,
+            sendingIndicatorId,
           });
           await messageObject.save();
 
