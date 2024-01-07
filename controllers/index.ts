@@ -336,6 +336,129 @@ export const getChatList = expressAsyncHandler(
   }
 );
 
+export const getChatListChat = expressAsyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const chatId = req.params.id;
+
+    // @ts-ignore
+    const userId = req.user._id;
+
+    const result = await UserModel.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(chatId),
+        },
+      },
+      {
+        $lookup: {
+          from: "messages",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    {
+                      $and: [
+                        { $eq: ["$sender", "$$userId"] },
+                        { $eq: ["$receiver", userId] },
+                      ],
+                    },
+                    {
+                      $and: [
+                        { $eq: ["$sender", userId] },
+                        { $eq: ["$receiver", "$$userId"] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $sort: { createdAt: -1 },
+            },
+            {
+              $limit: 1,
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "sender",
+                foreignField: "_id",
+                as: "senderDetails",
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "receiver",
+                foreignField: "_id",
+                as: "receiverDetails",
+              },
+            },
+            {
+              $unwind: {
+                path: "$senderDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: "$receiverDetails",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                sender: {
+                  _id: "$senderDetails._id",
+                  username: "$senderDetails.username",
+                  img: "$senderDetails.img",
+                  online: "$senderDetails.online",
+                  lastOnline: "$senderDetails.lastOnline",
+                  password: "$senderDetails.password",
+                },
+                receiver: {
+                  _id: "$receiverDetails._id",
+                  username: "$receiverDetails.username",
+                  img: "$receiverDetails.img",
+                  online: "$receiverDetails.online",
+                  lastOnline: "$receiverDetails.lastOnline",
+                  password: "$receiverDetails.password",
+                },
+                content: 1,
+                images: 1,
+                createdAt: 1,
+              },
+            },
+          ],
+          as: "latestMessage",
+        },
+      },
+      {
+        $unwind: {
+          path: "$latestMessage",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $sort: {
+          "latestMessage.createdAt": -1,
+          lastOnline: -1,
+        },
+      },
+      {
+        $project: {
+          password: 0,
+        },
+      },
+    ]);
+
+    if (result.length) res.status(200).json(result[0]);
+    else res.sendStatus(404);
+  }
+);
+
 export const getGroupChat = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     //@ts-ignore
