@@ -216,6 +216,17 @@ export const getChatList = expressAsyncHandler(
     await updateUserLastOnline(req.user._id);
 
     const LIMIT = (Number(req.query.loadOffset) || 1) * 10;
+    const searchValue = req.query.searchValue;
+
+    let regex;
+
+    if (typeof searchValue === "string" && searchValue.trim() !== "") {
+      const escapedSearchValue = searchValue.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+      regex = new RegExp(`^${escapedSearchValue}`, "i");
+    }
 
     // @ts-ignore
     const userId = req.user._id;
@@ -223,6 +234,9 @@ export const getChatList = expressAsyncHandler(
       {
         $match: {
           _id: { $ne: userId },
+          ...(regex && {
+            username: { $regex: regex },
+          }),
         },
       },
       {
@@ -695,10 +709,12 @@ export const editGroupChat = [
               });
             });
 
-            io.to(`group-chat-list-${updatedGroupObject._id.toString()}`).emit(
-              "receive-edit-group-chat-list",
-              updatedGroupObject
-            );
+            updatedGroupObject.users.forEach((user) => {
+              io.to(user).emit(
+                "receive-edit-group-chat-list",
+                updatedGroupObject
+              );
+            });
 
             res.status(200).json({
               success: true,
@@ -778,6 +794,17 @@ export const deleteGroupChat = expressAsyncHandler(
 export const getGroupChatList = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const LIMIT = (Number(req.query.loadOffset) || 1) * 5;
+    const searchValue = req.query.searchValue;
+
+    let regex;
+
+    if (typeof searchValue === "string" && searchValue.trim() !== "") {
+      const escapedSearchValue = searchValue.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+      regex = new RegExp(`^${escapedSearchValue}`, "i");
+    }
 
     // @ts-ignore
     const userId = req.user._id;
@@ -785,6 +812,9 @@ export const getGroupChatList = expressAsyncHandler(
       {
         $match: {
           users: userId.toString(),
+          ...(regex && {
+            name: { $regex: regex },
+          }),
         },
       },
       {
@@ -1226,22 +1256,16 @@ export const createGroupMessage = [
 
           io.to(roomId).emit("receive-group-message", retrievedMessage);
 
-          if (
-            io.sockets.adapter.rooms.get(
-              `group-chat-list-${messageObject.receiver.toString()}`
-            )
-          ) {
-            const group: GroupInterface = (await GroupModel.findById(
-              messageObject.receiver
-            ).lean())!;
-            io.to(`group-chat-list-${messageObject.receiver.toString()}`).emit(
-              "get-new-group-chat",
-              {
-                ...group,
-                latestMessage: retrievedMessage,
-              }
-            );
-          }
+          const group: GroupInterface = (await GroupModel.findById(
+            messageObject.receiver
+          ).lean())!;
+
+          group.users.forEach((user) => {
+            io.to(user).emit("get-new-group-chat", {
+              ...group,
+              latestMessage: retrievedMessage,
+            });
+          });
         }
         const files = req.files as Express.Multer.File[] | undefined;
 
@@ -1292,22 +1316,16 @@ export const createGroupMessage = [
 
           io.to(roomId).emit("receive-group-message", retrievedMessage);
 
-          if (
-            io.sockets.adapter.rooms.get(
-              `group-chat-list-${messageObject.receiver.toString()}`
-            )
-          ) {
-            const group: GroupInterface = (await GroupModel.findById(
-              messageObject.receiver
-            ).lean())!;
-            io.to(`group-chat-list-${messageObject.receiver.toString()}`).emit(
-              "get-new-group-chat",
-              {
-                ...group,
-                latestMessage: retrievedMessage,
-              }
-            );
-          }
+          const group: GroupInterface = (await GroupModel.findById(
+            messageObject.receiver
+          ).lean())!;
+
+          group.users.forEach((user) => {
+            io.to(user).emit("get-new-group-chat", {
+              ...group,
+              latestMessage: retrievedMessage,
+            });
+          });
         }
         res.sendStatus(200);
       } catch (err: any) {
@@ -1400,10 +1418,13 @@ export const deleteGroupMessage = expressAsyncHandler(
       io.to(message.receiver.toString()).emit("group-message-deleted", message);
 
       if (isLatestMessageDeleted === "true") {
-        io.to(`group-chat-list-${message.receiver.toString()}`).emit(
-          "group-message-deleted-group-chat-list",
-          message
-        );
+        const group: GroupInterface = (await GroupModel.findById(
+          message.receiver
+        ).lean())!;
+
+        group.users.forEach((user) => {
+          io.to(user).emit("group-message-deleted-group-chat-list", message);
+        });
       }
 
       res.sendStatus(204);
