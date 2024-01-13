@@ -1345,7 +1345,6 @@ export const deleteMessage = expressAsyncHandler(
     await updateUserLastOnline(req.user._id);
 
     const messageId = req.params.id;
-    const { isLatestMessageDeleted } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(messageId)) {
       res.status(200).json({
@@ -1369,17 +1368,15 @@ export const deleteMessage = expressAsyncHandler(
 
       io.to(message.receiver._id.toString()).emit("message-deleted", message);
       io.to(message.sender._id.toString()).emit("message-deleted", message);
-      if (isLatestMessageDeleted === "true") {
-        io.to(message.receiver._id.toString()).emit(
-          "message-deleted-chat-list",
-          message
-        );
+      io.to(message.receiver._id.toString()).emit(
+        "message-deleted-chat-list",
+        message
+      );
 
-        io.to(message.sender._id.toString()).emit(
-          "message-deleted-chat-list",
-          message
-        );
-      }
+      io.to(message.sender._id.toString()).emit(
+        "message-deleted-chat-list",
+        message
+      );
 
       res.sendStatus(204);
     }
@@ -1392,8 +1389,6 @@ export const deleteGroupMessage = expressAsyncHandler(
     await updateUserLastOnline(req.user._id);
 
     const messageId = req.params.id;
-
-    const { isLatestMessageDeleted } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(messageId)) {
       res.status(200).json({
@@ -1417,15 +1412,13 @@ export const deleteGroupMessage = expressAsyncHandler(
 
       io.to(message.receiver.toString()).emit("group-message-deleted", message);
 
-      if (isLatestMessageDeleted === "true") {
-        const group: GroupInterface = (await GroupModel.findById(
-          message.receiver
-        ).lean())!;
+      const group: GroupInterface = (await GroupModel.findById(
+        message.receiver
+      ).lean())!;
 
-        group.users.forEach((user) => {
-          io.to(user).emit("group-message-deleted-group-chat-list", message);
-        });
-      }
+      group.users.forEach((user) => {
+        io.to(user).emit("group-message-deleted-group-chat-list", message);
+      });
 
       res.sendStatus(204);
     }
