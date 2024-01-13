@@ -11,10 +11,10 @@ const messageSchema = new Schema(
   {
     sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
     receiver: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    content: { type: String },
+    content: String,
     images: { type: [imageSchema] },
     createdAt: { type: Date, default: Date.now },
-    sendingIndicatorId: { type: String, default: undefined, unique: true },
+    sendingIndicatorId: String,
   },
   { versionKey: false }
 );
