@@ -552,7 +552,7 @@ export const createGroupChat = [
             );
 
             if (uploadedImage) {
-              imageUrl = uploadedImage.url;
+              imageUrl = uploadedImage.secure_url;
             }
           }
           // @ts-ignore
@@ -642,7 +642,7 @@ export const editGroupChat = [
             );
 
             if (uploadedImage) {
-              imageUrl = uploadedImage.url;
+              imageUrl = uploadedImage.secure_url;
             }
           }
 
@@ -1168,8 +1168,8 @@ export const createMessage = [
             );
 
             if (uploadedImage) {
-              const { width, height, url } = uploadedImage;
-              images.push({ width, height, url });
+              const { width, height, secure_url } = uploadedImage;
+              images.push({ width, height, url: secure_url });
             }
           }
           //If text message exists show image(s) message first
@@ -1282,8 +1282,8 @@ export const createGroupMessage = [
             );
 
             if (uploadedImage) {
-              const { width, height, url } = uploadedImage;
-              images.push({ width, height, url });
+              const { width, height, secure_url } = uploadedImage;
+              images.push({ width, height, url: secure_url });
             }
           }
 
@@ -1403,6 +1403,7 @@ export const deleteGroupMessage = expressAsyncHandler(
 
       if (message.images && message.images.length > 0) {
         for (const image of message.images) {
+          console.log(image);
           const imageId = getPublicIdFromUrl(image.url);
           await cloudinary.uploader.destroy(imageId);
         }
@@ -1492,7 +1493,7 @@ export const editUserDetails = [
             );
 
             if (uploadedImage) {
-              imageUrl = uploadedImage.url;
+              imageUrl = uploadedImage.secure_url;
             }
           }
 
