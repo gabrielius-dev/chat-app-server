@@ -10,9 +10,7 @@ cron.schedule("* * * * *", () => {
   checkOfflineUsers();
 });
 
-server.listen(port, () => {
-  console.log(`Server is Fire at http://localhost:${port}`);
-});
+server.listen(port);
 
 export default app;
 export { io };
