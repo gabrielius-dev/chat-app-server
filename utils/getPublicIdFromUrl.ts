@@ -1,6 +1,6 @@
 const getPublicIdFromUrl = (url: string) => {
   const regex =
-    /http:\/\/res.cloudinary.com\/dlrcpfr2p\/image\/upload\/[^/]+\/([^/]+\/[^/]+)\..+/;
+    /https:\/\/res.cloudinary.com\/dlrcpfr2p\/image\/upload\/[^/]+\/([^/]+\/[^/]+)\..+/;
   const match = url.match(regex);
 
   if (match?.[1]) {
