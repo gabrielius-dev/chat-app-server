@@ -24,10 +24,13 @@ import {
 } from "../controllers";
 import cors from "cors";
 import multer from "multer";
+import dotenv from "dotenv";
+dotenv.config();
+
 const router = express.Router();
 
 const corsForRoutes = cors({
-  origin: "http://localhost:5173",
+  origin: process.env.FRONT_END_URL,
   credentials: true,
 });
 
