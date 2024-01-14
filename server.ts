@@ -10,6 +10,8 @@ import indexRouter from "./routes/index";
 import http, { Server as HttpServer } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { handleAuthentication, handleConnection } from "./controllers/socket";
+import MongoStore from "connect-mongo";
+
 dotenv.config();
 
 type CustomServer = {
@@ -29,25 +31,22 @@ function createServer(): CustomServer {
   const server = http.createServer(app);
   const io = new SocketIOServer(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: process.env.FRONT_END_URL,
       credentials: true,
     },
   });
 
-  let sessionMiddleware;
-  if (process.env.SESSION_SECRET_KEY)
-    sessionMiddleware = session({
-      secret: process.env.SESSION_SECRET_KEY,
-      resave: false,
-      saveUninitialized: true,
-      rolling: true,
-      cookie: { maxAge: 24 * 60 * 60 * 1000 },
-    });
-  else {
-    console.error("SESSION_SECRET_KEY environment variable is not defined.");
-  }
+  const sessionMiddleware = session({
+    secret: process.env.SESSION_SECRET_KEY || "",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI || "",
+    }),
+  });
 
-  if (sessionMiddleware) app.use(sessionMiddleware);
+  app.use(sessionMiddleware);
 
   app.use(passport.initialize());
   app.use(passport.session());
@@ -65,7 +64,7 @@ function createServer(): CustomServer {
     (socket: Socket, next: (err?: any) => void) =>
       middleware(socket.request, {}, next);
 
-  if (sessionMiddleware) io.use(wrap(sessionMiddleware));
+  io.use(wrap(sessionMiddleware));
   io.use(wrap(passport.initialize()));
   io.use(wrap(passport.session()));
 
