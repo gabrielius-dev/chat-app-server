@@ -41,7 +41,13 @@ function createServer(): CustomServer {
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: {
+      secure: process.env.NODE_ENV === "production" ? true : "auto",
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    },
+    proxy: true,
     store: MongoStore.create({
       mongoUrl: process.env.MONGODB_URI || "",
     }),
