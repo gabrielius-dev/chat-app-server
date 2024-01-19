@@ -174,11 +174,10 @@ export const userLogOutPost = expressAsyncHandler(
       lastOnline: Date.now(),
       online: false,
     });
-    req.logout((err: any) => {
+    req.session.destroy((err: any) => {
       if (err) return next(err);
+      res.sendStatus(200);
     });
-    res.clearCookie("connect.sid");
-    res.status(200).json({ success: true, message: "Log out successful" });
   }
 );
 
