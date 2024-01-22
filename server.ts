@@ -14,13 +14,7 @@ import MongoStore from "connect-mongo";
 
 dotenv.config();
 
-type CustomServer = {
-  app: Application;
-  server: HttpServer;
-  io: SocketIOServer;
-};
-
-function createServer(): CustomServer {
+function createServer() {
   if (process.env.MONGODB_URI) {
     mongoose.connect(process.env.MONGODB_URI);
   } else {
@@ -54,6 +48,7 @@ function createServer(): CustomServer {
   });
 
   app.use(sessionMiddleware);
+  app.set("socketio", io);
 
   app.use(passport.initialize());
   app.use(passport.session());
@@ -94,7 +89,7 @@ function createServer(): CustomServer {
     });
   });
 
-  return { app, server, io };
+  return server;
 }
 
 export default createServer;
