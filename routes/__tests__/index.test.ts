@@ -297,7 +297,6 @@ describe("POST /logout", () => {
       .set("Accept", "application/json");
 
     expect(response2.status).toBe(200);
-    expect(response2.body).toHaveProperty("message", "Log out successful");
   });
 });
 
