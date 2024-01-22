@@ -13,7 +13,6 @@ import GroupInterface from "../models/types/group";
 import cloudinary from "../configs/cloudinary.config";
 import uploadToCloudinary from "../utils/uploadToCloudinary";
 import getPublicIdFromUrl from "../utils/getPublicIdFromUrl";
-import { io } from "..";
 import MessageInterface from "../models/types/message";
 dotenv.config();
 
@@ -524,6 +523,7 @@ export const createGroupChat = [
   }),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      const io = req.app.get("socketio");
       const errors = validationResult(req).formatWith((err) => {
         if (err.type === "field")
           return {
@@ -612,6 +612,7 @@ export const editGroupChat = [
   }),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      const io = req.app.get("socketio");
       //@ts-ignore
       await updateUserLastOnline(req.user._id);
       const errors = validationResult(req).formatWith((err) => {
@@ -735,6 +736,7 @@ export const editGroupChat = [
 
 export const deleteGroupChat = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    const io = req.app.get("socketio");
     //@ts-ignore
     await updateUserLastOnline(req.user._id);
 
@@ -1116,6 +1118,7 @@ export const createMessage = [
   check("roomId").customSanitizer((value) => decodeURIComponent(value)),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      const io = req.app.get("socketio");
       try {
         //@ts-ignore
         await updateUserLastOnline(req.user._id);
@@ -1226,6 +1229,7 @@ export const createGroupMessage = [
   check("roomId").customSanitizer((value) => decodeURIComponent(value)),
   expressAsyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
+      const io = req.app.get("socketio");
       try {
         //@ts-ignore
         await updateUserLastOnline(req.user._id);
@@ -1340,6 +1344,7 @@ export const createGroupMessage = [
 
 export const deleteMessage = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    const io = req.app.get("socketio");
     //@ts-ignore
     await updateUserLastOnline(req.user._id);
 
@@ -1384,6 +1389,7 @@ export const deleteMessage = expressAsyncHandler(
 
 export const deleteGroupMessage = expressAsyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    const io = req.app.get("socketio");
     //@ts-ignore
     await updateUserLastOnline(req.user._id);
 
